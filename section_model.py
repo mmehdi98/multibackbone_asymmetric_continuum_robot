@@ -1,31 +1,37 @@
 import numpy as np
 from scipy.optimize import fsolve
 
-Ft = 1000  # Newton
-Fc = 0
+Ft = 100  # Newton
+Fc = 5
 
 At = np.array([0, 4.4e-3, 1e-3, 4.4e-3])
 Ac = np.array([0, 1e-3, 4.4e-3, 1e-3])
 
-R = 7e-3
+R = 5e-3
 alpha = np.array([np.arcsin(A / R) for A in At])
 betha = np.array([np.arccos(A / R) for A in Ac])
 
-Lr = 0
+print(alpha)
+print(betha)
+
+Lr = 2e-3
 Lt = np.array([Lr + R * np.cos(a) for a in alpha])
 Lc = np.array([Lr + R * np.cos(b) for b in betha])
 
-E = 70e9
+E = 7.5e9
 r = 0.4e-3
 I = (np.pi * r**4) / 4
-mu = 0.7
+mu = 0.4
 
 def main():
-    initial_guess = [0, 0, 0, 0, 0]
+    initial_guess = [0.5, 0.1, 0.5, Ft*0.95, Ft*0.8]
 
     solution = fsolve(equations, initial_guess)
 
-    print(f"Solution:\nth1 = {np.degrees(solution[0])}\nth2 = {np.degrees(solution[1])}\nth3 = {np.degrees(solution[2])}\nFr2 = {solution[3]}\nFr3 = {solution[4]}")
+    print(f"Solution:\nth1 = {solution[0]:.4f}\nth2 = {solution[1]:.4f}\nth3 = {solution[2]:.4f}\nFr2 = {solution[3]:.4f}\nFr3 = {solution[4]:.4f}")
+
+    print(np.isclose(equations(solution), [0.0, 0.0, 0.0, 0.0, 0.0]))
+    print(equations(solution))
 
 
 def equations(vars):
@@ -54,9 +60,10 @@ def equations(vars):
         )
     )
     eq2 = (
-        np.exp(-mu * th1) * th1
-        * (np.cos(th1) - mu*np.sin(th1)) * (Ft - Fc)
-        - Fr2 * np.sin(th1)
+        np.exp(-mu * (th1 + th2)) * th2
+        * (np.cos(th2) + mu*np.sin(th2)) * (Fc - Ft)
+        + Fr2
+        - Fr3 * np.cos(th2)
     )
     eq3 = (
         np.exp(-mu * (th1 + th2)) * th2
@@ -82,9 +89,13 @@ def equations(vars):
         )
     )
     eq4 = (
-        np.exp(-mu * (th1 + th2)) * th2
-        * (np.cos(th2) - mu*np.sin(th2)) * (Ft - Fc)
-        - Fr3 * np.sin(th2)
+        np.exp(-mu * (th1 + th2 + th3))
+        * (
+            (1+mu*th3) * np.cos(th3)
+            + th3 * np.sin(th3)
+        )
+        * (Fc - Ft)
+        + Fr3
     )
     eq5 = (
         np.exp(-mu * (th1 + th2 + th3))
