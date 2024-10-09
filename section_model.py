@@ -1,11 +1,28 @@
 import numpy as np
 from scipy.optimize import fsolve
 
-Ft = 100  # Newton
+Ft = 10  # Newton
 Fc = 5
 
-At = np.array([0, 4.4e-3, 1e-3, 4.4e-3])
-Ac = np.array([0, 1e-3, 4.4e-3, 1e-3])
+A_left = 4.4e-3
+A_right = 1e-3
+
+initial_guess = [0.5, 0.1, 0.5, 0.1, 0.5, Ft*0.95, Ft*0.8, Ft*0.75, Ft*0.7]
+# initial_guess = [0.5, 0.1, 0.5, Ft*0.95, Ft*0.8]
+
+num = int(len(initial_guess)/2)+1
+At = np.zeros(num)
+Ac = np.zeros(num)
+for i in range(num):
+    if i & 1 == 0:
+        At[i] = A_left
+        Ac[i] = A_right
+    else:
+        Ac[i] = A_left
+        At[i] = A_right
+
+# At = np.array([4.4e-3, 1e-3, 4.4e-3])
+# Ac = np.array([1e-3, 4.4e-3, 1e-3])
 
 R = 5e-3
 alpha = np.array([np.arcsin(A / R) for A in At])
@@ -24,101 +41,151 @@ I = (np.pi * r**4) / 4
 mu = 0.4
 
 def main():
-    initial_guess = [0.5, 0.1, 0.5, Ft*0.95, Ft*0.8]
 
     solution = fsolve(equations, initial_guess)
 
-    print(f"Solution:\nth1 = {solution[0]:.4f}\nth2 = {solution[1]:.4f}\nth3 = {solution[2]:.4f}\nFr2 = {solution[3]:.4f}\nFr3 = {solution[4]:.4f}")
+    for i, s in enumerate(solution):
+        if i < num:
+            print(f"Theta{i+1} = {s:.4f}")
+        else:
+            print(f"Fr{i+2-num} = {s:.4f}")
 
-    print(np.isclose(equations(solution), [0.0, 0.0, 0.0, 0.0, 0.0]))
+    # print(f"Solution:\nth1 = {solution[0]:.4f}\nth2 = {solution[1]:.4f}\nth3 = {solution[2]:.4f}\nFr2 = {solution[3]:.4f}\nFr3 = {solution[4]:.4f}")
+
+    print(np.isclose(equations(solution), np.zeros(len(initial_guess))))
     print(equations(solution))
+    # print(check_fx(solution))
 
 
 def equations(vars):
-    th1, th2, th3, Fr2, Fr3 = vars
-    eq1 = (
-        np.exp(-mu * th1) * th1
-        * (
-            Ft
-            * (
-                Lt[1] / 2
-                + R * (np.cos(th1) - np.cos(alpha[1]))
-                + mu * (At[1] - R * np.sin(th1))
-            )
-            - Fc
-            * (
-                Lc[1] / 2
-                + R * (np.cos(th1) - np.cos(betha[1]))
-                - mu * (Ac[1] + R * np.sin(th1))
-            )
-        )
-        + Fr2 * ((At[1] - At[2]) + (R * th2 - R * np.sin(th1)))
-        - (
-            (E * I / R)
-            * np.sin(th1)
-            * (1 / (1 - np.cos(alpha[1] - th1)) + 1 / (1 - np.cos(betha[1] + th1)))
-        )
-    )
-    eq2 = (
-        np.exp(-mu * (th1 + th2)) * th2
-        * (np.cos(th2) + mu*np.sin(th2)) * (Fc - Ft)
-        + Fr2
-        - Fr3 * np.cos(th2)
-    )
-    eq3 = (
-        np.exp(-mu * (th1 + th2)) * th2
-        * (
-            Ft
-            * (
-                Lt[2] / 2
-                + R * (np.cos(th2) - np.cos(alpha[2]))
-                + mu * (At[2] - R * np.sin(th2))
-            )
-            - Fc
-            * (
-                Lc[2] / 2
-                + R * (np.cos(th2) - np.cos(betha[2]))
-                - mu * (Ac[2] + R * np.sin(th2))
-            )
-        )
-        + Fr3 * ((Ac[2] - Ac[3]) + (R * th3 - R * np.sin(th2)))
-        - (
-            (E * I / R)
-            * np.sin(th2)
-            * (1 / (1 - np.cos(alpha[2] - th2)) + 1 / (1 - np.cos(betha[2] + th2)))
-        )
-    )
-    eq4 = (
-        np.exp(-mu * (th1 + th2 + th3))
-        * (
-            (1+mu*th3) * np.cos(th3)
-            + th3 * np.sin(th3)
-        )
-        * (Fc - Ft)
-        + Fr3
-    )
-    eq5 = (
-        np.exp(-mu * (th1 + th2 + th3))
-        * (
-            Ft
-            * (
-                (1+mu*th3)*(At[3] - R*np.sin(th3))
-                + th3 * (Lt[3] / 2 + R * (np.cos(th3) - np.cos(alpha[3])))
-            )
-            - Fc
-            * (
-                (1+mu*th3)*(Ac[3] + R*np.sin(th3))
-                - th3 * (Lc[3] / 2 + R * (np.cos(th3) - np.cos(betha[3])))
-            )
-        )
-        - (
-            (E * I / R)
-            * np.sin(th3)
-            * (1 / (1 - np.cos(alpha[3] - th3)) + 1 / (1 - np.cos(betha[3] + th3)))
-        )
-    )
-    return [eq1, eq2, eq3, eq4, eq5]
+    n = int(len(vars)/2)+1
+    th = np.array(vars[0:n])
+    Fr = np.array(vars[n:])
+    Fr = np.insert(Fr, 0, 0)
 
+    sum_th = np.cumsum(th)
+
+    M = np.zeros(n)
+    Fy = np.zeros(n)
+
+    for i in range(n):
+        if i == n-1:
+            M[i] = (
+                np.exp(-mu * sum_th[i])
+                * (
+                    Ft
+                    * (
+                        (1+mu*th[i])*(At[i] - R*np.sin(th[i]))
+                        + th[i] * (Lt[i] / 2 + R * (np.cos(th[i]) - np.cos(alpha[i])))
+                    )
+                    - Fc
+                    * (
+                        (1+mu*th[i])*(Ac[i] + R*np.sin(th[i]))
+                        - th[i] * (Lc[i] / 2 + R * (np.cos(th[i]) - np.cos(betha[i])))
+                    )
+                )
+                - (
+                    (E * I / R)
+                    * np.sin(th[i])
+                    * (1 / (1 - np.cos(alpha[i] - th[i])) + 1 / (1 - np.cos(betha[i] + th[i])))
+                )
+            )
+
+            Fy[i] = (
+                Fr[i] * np.cos(th[i])
+                + np.exp(-mu * sum_th[i]) * (Fc - Ft) * (1 + mu*th[i])
+            )
+        elif i & 1 == 0:
+            M[i] = (
+                np.exp(-mu * sum_th[i]) * th[i]
+                * (
+                    Ft
+                    * (
+                        Lt[i] / 2
+                        + R * (np.cos(th[i]) - np.cos(alpha[i]))
+                        + mu * (At[i] - R * np.sin(th[i]))
+                    )
+                    - Fc
+                    * (
+                        Lc[i] / 2
+                        + R * (np.cos(th[i]) - np.cos(betha[i]))
+                        - mu * (Ac[i] + R * np.sin(th[i]))
+                    )
+                )
+                + Fr[i+1] * ((At[i] - At[i+1]) + (R * th[i+1] - R * np.sin(th[i])))
+                - (
+                    (E * I / R)
+                    * np.sin(th[i])
+                    * (1 / (1 - np.cos(alpha[i] - th[i])) + 1 / (1 - np.cos(betha[i] + th[i])))
+                )
+            )
+
+            Fy[i] = (
+                Fr[i] * np.cos(th[i])
+                - Fr[i+1]
+                + mu * np.exp(-mu * sum_th[i]) * th[i] * (Fc - Ft)
+            )
+        else:
+            M[i] = (
+                np.exp(-mu * sum_th[i]) * th[i]
+                * (
+                    Ft
+                    * (
+                        Lt[i] / 2
+                        + R * (np.cos(th[i]) - np.cos(alpha[i]))
+                        + mu * (At[i] - R * np.sin(th[i]))
+                    )
+                    - Fc
+                    * (
+                        Lc[i] / 2
+                        + R * (np.cos(th[i]) - np.cos(betha[i]))
+                        - mu * (Ac[i] + R * np.sin(th[i]))
+                    )
+                )
+                + Fr[i+1] * ((Ac[i] - Ac[i+1]) + (R * th[i+1] - R * np.sin(th[i])))
+                - (
+                    (E * I / R)
+                    * np.sin(th[i])
+                    * (1 / (1 - np.cos(alpha[i] - th[i])) + 1 / (1 - np.cos(betha[i] + th[i])))
+                )
+            )
+
+            Fy[i] = (
+                Fr[i] * np.cos(th[i])
+                - Fr[i+1]
+                + mu * np.exp(-mu * sum_th[i]) * th[i] * (Fc - Ft)
+            )
+
+    # X-Force Equilibrium
+    # Fx1 = (
+    #     np.exp(-mu * th1) * th1
+    #     * (np.cos(th1) - mu*np.sin(th1)) * (Ft - Fc)
+    #     - Fr2 * np.sin(th1)
+    # )
+
+    # Fx2 = (
+    #     np.exp(-mu * (th1 + th2)) * th2
+    #     * (np.cos(th2) - mu*np.sin(th2)) * (Ft - Fc)
+    #     - Fr3 * np.sin(th2)
+    # )
+
+    return np.concatenate((M, Fy[1:]))
+
+def check_fx(vars):
+    th1, th2, th3, Fr2, Fr3 = vars
+    # X-Force Equilibrium
+    Fx1 = (
+        np.exp(-mu * th1) * th1
+        * (np.cos(th1) - mu*np.sin(th1)) * (Ft - Fc)
+        - Fr2 * np.sin(th1)
+    )
+
+    Fx2 = (
+        np.exp(-mu * (th1 + th2)) * th2
+        * (np.cos(th2) - mu*np.sin(th2)) * (Ft - Fc)
+        - Fr3 * np.sin(th2)
+    )
+    return [Fx1, Fx2]
 
 if __name__ == "__main__":
     main()
