@@ -3,7 +3,6 @@ from scipy.optimize import fsolve
 import matplotlib.pyplot as plt
 
 # Ft = 10  # Newton
-Fc = 0
 
 A_left = 4.4e-3
 A_right = 1e-3
@@ -127,11 +126,6 @@ def equations(vars, Ft):
                         (1+mu*th[i])*(At[i] - R*np.sin(th[i]))
                         + th[i] * (Lt[i] / 2 + R * (np.cos(th[i]) - np.cos(alpha[i])))
                     )
-                    - Fc
-                    * (
-                        (1+mu*th[i])*(Ac[i] + R*np.sin(th[i]))
-                        - th[i] * (Lc[i] / 2 + R * (np.cos(th[i]) - np.cos(betha[i])))
-                    )
                 )
                 - (
                     (E * I / R)
@@ -142,7 +136,7 @@ def equations(vars, Ft):
 
             Fy[i] = (
                 Fr[i] * np.cos(th[i])
-                + np.exp(-mu * sum_th[i]) * (Fc - Ft) * (1 + mu*th[i])
+                - Ft * np.exp(-mu * sum_th[i]) * (1 + mu*th[i])
             )
         elif i & 1 == 0:
             M[i] = (
@@ -153,12 +147,6 @@ def equations(vars, Ft):
                         Lt[i] / 2
                         + R * (np.cos(th[i]) - np.cos(alpha[i]))
                         + mu * (At[i] - R * np.sin(th[i]))
-                    )
-                    - Fc
-                    * (
-                        Lc[i] / 2
-                        + R * (np.cos(th[i]) - np.cos(betha[i]))
-                        - mu * (Ac[i] + R * np.sin(th[i]))
                     )
                 )
                 + Fr[i+1] * ((At[i] - At[i+1]) + (R * th[i+1] - R * np.sin(th[i])))
@@ -172,7 +160,7 @@ def equations(vars, Ft):
             Fy[i] = (
                 Fr[i] * np.cos(th[i])
                 - Fr[i+1]
-                + mu * np.exp(-mu * sum_th[i]) * th[i] * (Fc - Ft)
+                - Ft * mu * np.exp(-mu * sum_th[i]) * th[i]
             )
         else:
             M[i] = (
@@ -183,12 +171,6 @@ def equations(vars, Ft):
                         Lt[i] / 2
                         + R * (np.cos(th[i]) - np.cos(alpha[i]))
                         + mu * (At[i] - R * np.sin(th[i]))
-                    )
-                    - Fc
-                    * (
-                        Lc[i] / 2
-                        + R * (np.cos(th[i]) - np.cos(betha[i]))
-                        - mu * (Ac[i] + R * np.sin(th[i]))
                     )
                 )
                 + Fr[i+1] * ((Ac[i] - Ac[i+1]) + (R * th[i+1] - R * np.sin(th[i])))
@@ -202,7 +184,7 @@ def equations(vars, Ft):
             Fy[i] = (
                 Fr[i] * np.cos(th[i])
                 - Fr[i+1]
-                + mu * np.exp(-mu * sum_th[i]) * th[i] * (Fc - Ft)
+                - Ft * mu * np.exp(-mu * sum_th[i]) * th[i]
             )
 
     # X-Force Equilibrium
