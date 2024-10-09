@@ -4,39 +4,51 @@ import matplotlib.pyplot as plt
 
 # Ft = 10  # Newton
 
-A_left = 4.4e-3
-A_right = 1e-3
+num = 7
+
+def initial_guess_gen(Ft):
+    return [0.4, 0.05, 0.4, 0.05, 0.4, 0.05, 0.4, Ft * 0.95, Ft * 0.8, Ft * 0.75, Ft * 0.7, Ft * 0.65, Ft * 0.6]
+
+A_1 = 3.6e-3
+A_2 = 0.4e-3
+
+R_1 = 6.41e-3
+R_2 = 2.43e-3
 
 # initial_guess = [0.5, 0.1, 0.5, 0.1, 0.5, Ft*0.95, Ft*0.8, Ft*0.75, Ft*0.7]
 # initial_guess = [0.5, 0.1, 0.5, Ft*0.95, Ft*0.8]
 
-num = 7
 At = np.zeros(num)
 Ac = np.zeros(num)
+R_left = np.zeros(num)
+R_right = np.zeros(num)
 for i in range(num):
     if i & 1 == 0:
-        At[i] = A_left
-        Ac[i] = A_right
+        At[i] = A_1
+        Ac[i] = A_2
+        R_left[i] = R_1
+        R_right[i] = R_2
     else:
-        Ac[i] = A_left
-        At[i] = A_right
+        At[i] = A_2
+        Ac[i] = A_1
+        R_left[i] = R_2
+        R_right[i] = R_1
 
 # At = np.array([4.4e-3, 1e-3, 4.4e-3])
 # Ac = np.array([1e-3, 4.4e-3, 1e-3])
 
-R = 5e-3
-alpha = np.array([np.arcsin(A / R) for A in At])
-betha = np.array([np.arcsin(A / R) for A in Ac])
+alpha = np.array([np.arcsin(At[i] / R_left[i]) for i in range(num)])
+betha = np.array([np.arcsin(Ac[i] / R_right[i]) for i in range(num)])
 
 print(np.degrees(alpha))
 print(np.degrees(betha))
 
-print(alpha)
-print(betha)
+print(f"R_left: {R_left}")
+print(f"R_right: {R_right}")
 
 Lr = 2e-3
-Lt = np.array([Lr + R * np.cos(a) for a in alpha])
-Lc = np.array([Lr + R * np.cos(b) for b in betha])
+Lt = np.array([Lr + R_left[i] * np.cos(a) for i, a in enumerate(alpha)])
+Lc = np.array([Lr + R_right[i] * np.cos(b) for i, b in enumerate(betha)])
 
 E = 7.5e9
 r = 0.4e-3
@@ -117,20 +129,21 @@ def equations(vars, Ft):
     Fy = np.zeros(n)
 
     for i in range(n):
+        # The last joint
         if i == n-1:
             M[i] = (
                 np.exp(-mu * sum_th[i])
                 * (
                     Ft
                     * (
-                        (1+mu*th[i])*(At[i] - R*np.sin(th[i]))
-                        + th[i] * (Lt[i] / 2 + R * (np.cos(th[i]) - np.cos(alpha[i])))
+                        (1+mu*th[i])*(At[i] - R_left[i]*np.sin(th[i]))
+                        + th[i] * (Lt[i] / 2 + R_left[i] * (np.cos(th[i]) - np.cos(alpha[i])))
                     )
                 )
                 - (
-                    (E * I / R)
-                    * np.sin(th[i])
-                    * (1 / (1 - np.cos(alpha[i] - th[i])) + 1 / (1 - np.cos(betha[i] + th[i])))
+                    (E * I) * np.sin(th[i])
+                    * (1 / (R_left[i] * (1 - np.cos(alpha[i] - th[i]))) 
+                    + 1 / (R_right[i] * (1 - np.cos(betha[i] + th[i]))))
                 )
             )
 
@@ -138,6 +151,7 @@ def equations(vars, Ft):
                 Fr[i] * np.cos(th[i])
                 - Ft * np.exp(-mu * sum_th[i]) * (1 + mu*th[i])
             )
+        # Protagonist joints
         elif i & 1 == 0:
             M[i] = (
                 np.exp(-mu * sum_th[i]) * th[i]
@@ -145,15 +159,15 @@ def equations(vars, Ft):
                     Ft
                     * (
                         Lt[i] / 2
-                        + R * (np.cos(th[i]) - np.cos(alpha[i]))
-                        + mu * (At[i] - R * np.sin(th[i]))
+                        + R_left[i] * (np.cos(th[i]) - np.cos(alpha[i]))
+                        + mu * (At[i] - R_left[i] * np.sin(th[i]))
                     )
                 )
-                + Fr[i+1] * ((At[i] - At[i+1]) + (R * th[i+1] - R * np.sin(th[i])))
+                + Fr[i+1] * ((At[i] - At[i+1]) + (R_left[i+1] * th[i+1] - R_left[i] * np.sin(th[i])))
                 - (
-                    (E * I / R)
-                    * np.sin(th[i])
-                    * (1 / (1 - np.cos(alpha[i] - th[i])) + 1 / (1 - np.cos(betha[i] + th[i])))
+                    (E * I) * np.sin(th[i])
+                    * (1 / (R_left[i] * (1 - np.cos(alpha[i] - th[i]))) 
+                    + 1 / (R_right[i] * (1 - np.cos(betha[i] + th[i]))))
                 )
             )
 
@@ -162,6 +176,7 @@ def equations(vars, Ft):
                 - Fr[i+1]
                 - Ft * mu * np.exp(-mu * sum_th[i]) * th[i]
             )
+        # Antagonist joints
         else:
             M[i] = (
                 np.exp(-mu * sum_th[i]) * th[i]
@@ -169,15 +184,15 @@ def equations(vars, Ft):
                     Ft
                     * (
                         Lt[i] / 2
-                        + R * (np.cos(th[i]) - np.cos(alpha[i]))
-                        + mu * (At[i] - R * np.sin(th[i]))
+                        + R_left[i] * (np.cos(th[i]) - np.cos(alpha[i]))
+                        + mu * (At[i] - R_left[i] * np.sin(th[i]))
                     )
                 )
-                + Fr[i+1] * ((Ac[i] - Ac[i+1]) + (R * th[i+1] - R * np.sin(th[i])))
+                + Fr[i+1] * ((Ac[i] - Ac[i+1]) + (R_left[i+1] * th[i+1] - R_left[i] * np.sin(th[i])))
                 - (
-                    (E * I / R)
-                    * np.sin(th[i])
-                    * (1 / (1 - np.cos(alpha[i] - th[i])) + 1 / (1 - np.cos(betha[i] + th[i])))
+                    (E * I) * np.sin(th[i])
+                    * (1 / (R_left[i] * (1 - np.cos(alpha[i] - th[i]))) 
+                    + 1 / (R_right[i] * (1 - np.cos(betha[i] + th[i]))))
                 )
             )
 
@@ -246,9 +261,6 @@ def plot_robot(theta_radians, ax, Ft):
     ax.set_yticks(np.arange(-0.1, 0.9, 0.1))
     ax.grid(True)
     ax.legend()
-
-def initial_guess_gen(Ft):
-    return [0.8, 0.12, 0.8, 0.12, 0.8, 0.12, 0.8, Ft * 0.95, Ft * 0.8, Ft * 0.75, Ft * 0.7, Ft * 0.65, Ft * 0.6]
 
 if __name__ == "__main__":
     main()
