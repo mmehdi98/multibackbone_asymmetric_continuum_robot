@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 num = 7
 
 def initial_guess_gen(Ft):
-    return [0.4, 0.05, 0.4, 0.05, 0.4, 0.05, 0.4, Ft * 0.95, Ft * 0.8, Ft * 0.75, Ft * 0.7, Ft * 0.65, Ft * 0.6]
+    return [0.4, 0.1, 0.4, 0.1, 0.4, 0.1, 0.4, Ft * 0.95, Ft * 0.8, Ft * 0.75, Ft * 0.7, Ft * 0.65, Ft * 0.6]
 
-A_1 = 3.6e-3
-A_2 = 0.4e-3
+A_1 = 3e-3
+A_2 = 1.2e-3
 
 R_1 = 6.41e-3
 R_2 = 2.43e-3
