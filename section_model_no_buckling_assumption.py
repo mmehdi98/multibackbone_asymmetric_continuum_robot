@@ -15,8 +15,6 @@ def initial_guess_gen(Ft):
     return theta_guess+Ft_guess
     # return [0.4, 0.1, 0.4, 0.1, 0.4, 0.1, 0.4, Ft * 0.95, Ft * 0.8, Ft * 0.75, Ft * 0.7, Ft * 0.65, Ft * 0.6]
 
-L = 10e-3
-
 A_1 = 3e-3
 A_2 = 1.2e-3
 
@@ -54,8 +52,9 @@ print(np.degrees(betha))
 print(f"R_left: {R_left}")
 print(f"R_right: {R_right}")
 
-Lt = np.array([R_left[i] * np.cos(a) + (L - R_left[i]) for i, a in enumerate(alpha)])
-Lc = np.array([R_right[i] * np.cos(b) + (L - R_right[i]) for i, b in enumerate(betha)])
+Lr = 2e-3
+Lt = np.array([Lr + R_left[i] * np.cos(a) for i, a in enumerate(alpha)])
+Lc = np.array([Lr + R_right[i] * np.cos(b) for i, b in enumerate(betha)])
 
 E = 35e9
 r = 0.4e-3
