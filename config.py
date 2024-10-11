@@ -9,7 +9,7 @@ def initialize_constants():
         "R_1" : 6.41e-3, # Larger radius
         "R_2" : 2.43e-3, # Smaller radius
         "E" : 35e9, # Modulus of elasticity
-        "r" : 0.4e-3, # Radius of the backbone
+        "r" : 0.3e-3, # Radius of the backbone
         "mu" : 0.1, # Friction coefficient
     }
 

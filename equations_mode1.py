@@ -1,6 +1,7 @@
 import numpy as np
 
 def equations(vars, constants, Ft):
+    L = constants["L"]
     mu = constants["mu"]
     E = constants["E"]
     I = constants["I"]
@@ -73,7 +74,7 @@ def equations(vars, constants, Ft):
             )
         # Antagonist joints
         else:
-            M[i] = (
+            M_reverse =(
                 np.exp(-mu * sum_th[i]) * th[i]
                 * (
                     Ft
@@ -83,13 +84,61 @@ def equations(vars, constants, Ft):
                         + mu * (At[i] - R_left[i] * np.sin(th[i]))
                     )
                 )
-                - Fr[i+1] * ((Ac[i] - Ac[i+1]) + (R_left[i+1] * th[i+1] - R_left[i] * np.sin(th[i])))
-                - (
-                    (E * I) * np.sin(th[i])
-                    * (1 / (R_left[i] * (1 - np.cos(alpha[i] - th[i]))) 
-                    + 1 / (R_right[i] * (1 - np.cos(betha[i] + th[i]))))
-                )
+                - Fr[i+1] * ((Ac[i] - Ac[i+1]) - (R_left[i+1] * th[i+1] - R_left[i] * np.sin(th[i])))
             )
+
+            if M_reverse <0:
+                M[i] = (
+                    Fr[i+1] * (Ac[i] - (Ac[i+1] + R_left[i+1] * th[i+1] + R_right[i] * np.sin(th[i])))
+                    - np.exp(-mu * sum_th[i]) * th[i] * Ft
+                    * (
+                        L - R_right[i] - Lt[i] / 2
+                        + R_right[i] * np.cos(th[i])
+                        + mu * (At[i] + R_right[i] * np.sin(th[i]))
+                    )
+                    - (
+                        (E * I) * np.sin(th[i])
+                        * (1 / (R_left[i] * (1 - np.cos(alpha[i] - th[i]))) 
+                        + 1 / (R_right[i] * (1 - np.cos(betha[i] + th[i]))))
+                    )
+                )
+
+            elif M_reverse > 0:
+                M[i] = (
+                    np.exp(-mu * sum_th[i]) * th[i] * Ft
+                    * (
+                        Lt[i] / 2
+                        + R_left[i] * (np.cos(th[i]) - np.cos(alpha[i]))
+                        + mu * (At[i] - R_left[i] * np.sin(th[i]))
+                    )
+                    - Fr[i+1] * ((Ac[i] - Ac[i+1]) - (R_left[i+1] * th[i+1] - R_left[i] * np.sin(th[i])))
+                    - (
+                        (E * I) * np.sin(th[i])
+                        * (1 / (R_left[i] * (1 - np.cos(alpha[i] - th[i]))) 
+                        + 1 / (R_right[i] * (1 - np.cos(betha[i] + th[i]))))
+                    )
+                )
+
+            else:
+                pass
+
+            # M[i] = (
+            #     np.exp(-mu * sum_th[i]) * th[i]
+            #     * (
+            #         Ft
+            #         * (
+            #             Lt[i] / 2
+            #             + R_left[i] * (np.cos(th[i]) - np.cos(alpha[i]))
+            #             + mu * (At[i] - R_left[i] * np.sin(th[i]))
+            #         )
+            #     )
+            #     - Fr[i+1] * ((Ac[i] - Ac[i+1]) + (R_left[i+1] * th[i+1] - R_left[i] * np.sin(th[i])))
+            #     - (
+            #         (E * I) * np.sin(th[i])
+            #         * (1 / (R_left[i] * (1 - np.cos(alpha[i] - th[i]))) 
+            #         + 1 / (R_right[i] * (1 - np.cos(betha[i] + th[i]))))
+            #     )
+            # )
 
             Fy[i] = (
                 Fr[i] * np.cos(th[i])

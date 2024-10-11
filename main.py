@@ -10,7 +10,10 @@ def main():
 
     Ft_values = np.arange(1, 101, 1)
 
-    theta_solutions = solve_robot(config, Ft_values, equations, initial_guess_gen, th_p_guess= 0.4, th_a_guess= 0.1)
+    th_p_guess = 0.4
+    th_a_guess = 0.2
+
+    theta_solutions = solve_robot(config, Ft_values, equations, th_p_guess= th_p_guess, th_a_guess= th_a_guess)
 
     fig, axs = plt.subplots(1, 3, figsize=(20, 6))
 
@@ -19,9 +22,8 @@ def main():
     plotter.plot_theta_sum(Ft_values, theta_solutions, axs[1])
 
     for Ft in [20, 30, 40, 60, 80, 100]:
-        solution = solve_robot(config, [Ft], equations, initial_guess_gen, th_p_guess= 0.4, th_a_guess= 0.1)
+        theta_plot = solve_robot(config, [Ft], equations, th_p_guess= th_p_guess, th_a_guess= th_a_guess)
 
-        theta_plot = (solution[:config["num"]])
         plotter.plot_robot(theta_plot, axs[2], Ft)
 
     plt.tight_layout()
