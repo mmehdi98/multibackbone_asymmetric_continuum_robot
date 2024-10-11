@@ -88,6 +88,7 @@ def equations(vars, constants, Ft):
             )
 
             if M_reverse <0:
+                th[i] = -th[i]
                 M[i] = (
                     Fr[i+1] * (Ac[i] - (Ac[i+1] + R_left[i+1] * th[i+1] + R_right[i] * np.sin(th[i])))
                     - np.exp(-mu * sum_th[i]) * th[i] * Ft
