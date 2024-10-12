@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.optimize import fsolve
+from scipy.optimize import root
 
 
 def initial_guess_gen(n, Ft, th_p_guess= 0.4, th_a_guess= 0.1):
@@ -8,14 +8,20 @@ def initial_guess_gen(n, Ft, th_p_guess= 0.4, th_a_guess= 0.1):
 
     return theta_guess+Ft_guess
 
-def solve_robot(config, Ft_values, equations, th_p_guess= 0.4, th_a_guess= 0.1):
+def solve_robot(config, Ft_values, equations, th_p_guess= 0, th_a_guess= 0, method='hybr'):
     theta_solutions = []
+    initial_guess = initial_guess_gen(config["num"], 0, th_p_guess= th_p_guess, th_a_guess= th_a_guess)
 
     for Ft in Ft_values:
-        initial_guess = initial_guess_gen(config["num"], Ft, th_p_guess= th_p_guess, th_a_guess= th_a_guess)
+        solution = root(lambda vars: equations(vars, config, Ft), initial_guess, method=method)
 
-        solution = fsolve(lambda vars: equations(vars, config, Ft), initial_guess)
+        # theta_solutions.append(solution.x[:config["num"]])
+        # initial_guess = list(solution.x)
 
-        theta_solutions.append(solution[:config["num"]]) 
+        if solution.success:
+            theta_solutions.append(solution.x[:config["num"]])
+            initial_guess = list(solution.x)
+        else:
+            raise ValueError(f"Root-finding failed for Ft={Ft}: {solution.message}")
 
     return np.array(theta_solutions)
