@@ -1,6 +1,7 @@
 import numpy as np
+from utils import elastic_moment
 
-def equations(vars, constants, Ft):
+def equations(vars, constants, Ft, elastic_model):
     L = constants["L"]
     mu = constants["mu"]
     E = constants["E"]
@@ -36,11 +37,7 @@ def equations(vars, constants, Ft):
                         + th[i] * (Lt[i] / 2 + R_left[i] * (np.cos(th[i]) - np.cos(alpha[i])))
                     )
                 )
-                - (
-                    (E * I) * np.sin(th[i])
-                    * (1 / (R_left[i] * (1 - np.cos(alpha[i] - th[i]))) 
-                    + 1 / (R_right[i] * (1 - np.cos(betha[i] + th[i]))))
-                )
+                - elastic_moment(i, E, I, L, th, R_left, R_right, alpha, betha, elastic_model)
             )
 
             Fy[i] = (
@@ -60,11 +57,7 @@ def equations(vars, constants, Ft):
                     )
                 )
                 + Fr[i+1] * ((At[i] - At[i+1]) + (R_left[i+1] * th[i+1] - R_left[i] * np.sin(th[i])))
-                - (
-                    (E * I) * np.sin(th[i])
-                    * (1 / (R_left[i] * (1 - np.cos(alpha[i] - th[i]))) 
-                    + 1 / (R_right[i] * (1 - np.cos(betha[i] + th[i]))))
-                )
+                - elastic_moment(i, E, I, L, th, R_left, R_right, alpha, betha, elastic_model)
             )
 
             Fy[i] = (
@@ -97,11 +90,7 @@ def equations(vars, constants, Ft):
                         + R_right[i] * np.cos(th[i])
                         + mu * (At[i] + R_right[i] * np.sin(th[i]))
                     )
-                    - (
-                        (E * I) * np.sin(th[i])
-                        * (1 / (R_left[i] * (1 - np.cos(alpha[i] - th[i]))) 
-                        + 1 / (R_right[i] * (1 - np.cos(betha[i] + th[i]))))
-                    )
+                    - elastic_moment(i, E, I, L, th, R_left, R_right, alpha, betha, elastic_model)
                 )
 
             elif M_reverse > 0:
@@ -113,11 +102,7 @@ def equations(vars, constants, Ft):
                         + mu * (At[i] - R_left[i] * np.sin(th[i]))
                     )
                     - Fr[i+1] * ((Ac[i] - Ac[i+1]) - (R_left[i+1] * th[i+1] - R_left[i] * np.sin(th[i])))
-                    - (
-                        (E * I) * np.sin(th[i])
-                        * (1 / (R_left[i] * (1 - np.cos(alpha[i] - th[i]))) 
-                        + 1 / (R_right[i] * (1 - np.cos(betha[i] + th[i]))))
-                    )
+                    - elastic_moment(i, E, I, L, th, R_left, R_right, alpha, betha, elastic_model)
                 )
 
             else:

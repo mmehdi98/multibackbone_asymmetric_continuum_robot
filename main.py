@@ -11,7 +11,7 @@ def main():
 
     Ft_values = np.arange(1, 101, 1)
 
-    theta_solutions = solve_robot(config, Ft_values, equations)
+    theta_solutions = solve_robot(config, Ft_values, equations, elastic_model= 'linear')
 
     fig, axs = plt.subplots(1, 3, figsize=(20, 6))
 
@@ -27,9 +27,9 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    optimal_params, optimized_theta2 = optimize_robot(config, Ft_values, (10e-3, 15e-3))
-    print(f"Optimal Parameters: {optimal_params}")
-    print(f"Optimal Maximum Buckling of joint 2: {np.degrees(optimized_theta2)} degrees")
+    # optimal_params, optimized_theta2 = optimize_robot(config, Ft_values, (10e-3, 15e-3))
+    # print(f"Optimal Parameters: {optimal_params}")
+    # print(f"Optimal Maximum Buckling of joint 2: {np.degrees(optimized_theta2)} degrees")
 
 if __name__ == "__main__":
     main()
