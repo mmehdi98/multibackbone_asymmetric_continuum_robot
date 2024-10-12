@@ -27,9 +27,9 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    # optimal_params, optimized_theta2 = optimize_robot(config, Ft_values, (10e-3, 15e-3))
-    # print(f"Optimal Parameters: {optimal_params}")
-    # print(f"Optimal Maximum Buckling of joint 2: {np.degrees(optimized_theta2)} degrees")
+    optimal_params, optimized_theta2 = optimize_robot(config, Ft_values, (2.43e-3, 7e-3), elastic_model= 'linear')
+    print(f"Optimal Parameters: {optimal_params}")
+    print(f"Optimal Maximum Buckling of joint 2: {np.degrees(optimized_theta2)} degrees")
 
 if __name__ == "__main__":
     main()

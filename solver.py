@@ -8,7 +8,7 @@ def initial_guess_gen(n, Ft, th_p_guess= 0.4, th_a_guess= 0.1):
 
     return theta_guess+Ft_guess
 
-def solve_robot(config, Ft_values, equations, th_p_guess= 0.5, th_a_guess= -0.1, method='hybr', elastic_model= 'non-linear'):
+def solve_robot(config, Ft_values, equations, elastic_model, th_p_guess= 0.5, th_a_guess= -0.1, method='hybr'):
     theta_solutions = []
     initial_guess = initial_guess_gen(config["num"], 0, th_p_guess= th_p_guess, th_a_guess= th_a_guess)
 
