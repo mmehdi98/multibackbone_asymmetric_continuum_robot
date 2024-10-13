@@ -4,7 +4,7 @@ def elastic_moment(i, E, I, L, th, R_left, R_right, alpha, betha, model= 'non-li
     vertical_dist_left = (R_left[i] * (1 - np.cos(alpha[i] - th[i])))
     vertical_dist_right = (R_right[i] * (1 - np.cos(betha[i] + th[i])))
 
-    k = 10
+    k = 12
     d = 0.9e-3
     match model:
         case 'linear':

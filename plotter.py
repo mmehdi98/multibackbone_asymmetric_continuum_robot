@@ -1,10 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def plot_robot(theta, ax, Ft):
+def plot_robot(theta, ax, Ft, length):
     theta = np.ravel(theta)
     num = np.size(theta)
-    length = 10
+    length = length * 1000
 
     x_coords = [0]
     y_coords = [0] 

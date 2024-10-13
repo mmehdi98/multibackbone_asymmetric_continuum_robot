@@ -2,8 +2,8 @@ import numpy as np
 
 def initialize_constants():
     constants = {
-        "num" : 7, # The number of joints
-        "L" : 10e-3, # Total length of a joint
+        "num" : 15, # The number of joints
+        "L" : 15e-3, # Total length of a joint
         "A_1" : 3e-3, # Larger distance to the point of max length
         "A_2" : 1.2e-3, # Smaller distance to the point of max length
         "R_1" : 6.41e-3, # Larger radius
