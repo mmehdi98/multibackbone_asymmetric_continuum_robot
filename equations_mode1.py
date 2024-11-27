@@ -79,7 +79,7 @@ def equations(vars, constants, Ft, elastic_model):
                 )
                 - Fr[i+1] * ((Ac[i] - Ac[i+1]) - (R_left[i+1] * th[i+1] - R_left[i] * np.sin(th[i])))
             )
-
+            # Reverse motion
             if M_reverse <0:
                 th[i] = -th[i]
                 M[i] = (
@@ -92,7 +92,7 @@ def equations(vars, constants, Ft, elastic_model):
                     )
                     - elastic_moment(i, E, I, L, th, R_left, R_right, alpha, betha, elastic_model)
                 )
-
+            #Normal motion
             elif M_reverse > 0:
                 M[i] = (
                     np.exp(-mu * sum_th[i]) * th[i] * Ft
