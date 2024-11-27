@@ -75,7 +75,7 @@ def main():
     R2_bounds = (2.67e-3, 7e-3)
     E_bounds = (5e9, 70e9)
     optimal_params, optimized_error = optimize_model(
-        config, np.linspace(1, 47.85923754, 50), R2_bounds, E_bounds, measured_directory, elastic_model="non-linear"
+        config, measured_Ft, R2_bounds, E_bounds, measured_directory, elastic_model="non-linear"
     )
     print(f"Optimal R2: {optimal_params[0] * 1000}mm")
     print(f"Optimal E: {optimal_params[1]}")

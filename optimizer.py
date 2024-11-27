@@ -26,28 +26,48 @@ def optimize_buckling(config, Ft_values, R_2_bounds, L_bounds, * , elastic_model
     return result.x, -result.fun
     
 
-def optimize_model(config, Ft_values, R_2_bounds, E_bounds, measured_directory, *, elastic_model):
+def optimize_model(config, measured_Ft, R_2_bounds, E_bounds, measured_directory, *, elastic_model):
 
-    x_measured, y_measured = utils.read_measurements(measured_directory, test_num="max_disp")
-    x_measured = x_measured[0]
-    y_measured = y_measured[0]
+    x_measured, y_measured = utils.read_measurements(measured_directory)
+
+    modeled_x, modeled_y = [[15*i for i in range(16)]], [[0]*16]
+    diff = []
+    for i in range(len(x_measured)):
+        diff.append([(x_measured[i][k]-modeled_x[0][k])**2 + (y_measured[i][k]-modeled_y[0][k])**2 for k in range(len(x_measured[i]))])
 
     def objective_function(params):
         config = initialize_constants_optimization(params[0], params[1])
+        Ft_values = (np.append(np.arange(1, measured_Ft[-1], 50), measured_Ft))
+        Ft_values = np.sort(Ft_values)
 
-        theta = solve_robot(config, Ft_values, equations, elastic_model= elastic_model)[-1]
+        theta = solve_robot(config, Ft_values, equations, elastic_model= elastic_model)
 
-        modeled_x, modeled_y = utils.theta_to_xy(theta, config['L'])
+        modeled_x, modeled_y = [[15*i for i in range(16)]], [[0]*16]
+        for Ft in measured_Ft:
+            index = np.where(Ft_values == Ft)[0][0]
+            angles = theta[index]
+            x_m, y_m = utils.theta_to_xy(angles, config['L'])
+            modeled_x.append(x_m)
+            modeled_y.append(y_m)
 
-        if x_measured is None or len(modeled_x) != len(x_measured):
+        if x_measured is None or len(modeled_x) != len(x_measured) or len(modeled_x[0]) != len(x_measured[0]):
             raise ValueError("Mismatch in data length or missing measurement data.")
-    
-        errors = [
-            np.sqrt((mx - x)**2 + (my - y)**2)
-            for mx, my, x, y in zip(modeled_x, modeled_y, x_measured, y_measured)
-        ]
 
-        mean_error = np.mean(errors)
+        errors = []
+        for i in range(len(x_measured)):
+            for mx, my, x, y, d in zip(modeled_x[i], modeled_y[i], x_measured[i], y_measured[i], diff[i]):
+                error = []
+                if (d-0) < 0.0005:
+                    error.append(0)
+                else:
+                    error.append(np.sqrt((mx - x)**2 + (my - y)**2)/d)
+            errors.append(error)
+
+        mean_error_list = []
+        for error in errors:
+            mean_error_list.append(np.mean(errors))
+
+        mean_error = np.mean(mean_error_list)
 
         print(mean_error)
 

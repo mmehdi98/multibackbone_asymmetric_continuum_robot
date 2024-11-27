@@ -7,8 +7,8 @@ def initialize_constants():
         "A_1" : 3.5e-3, # Larger distance to the point of max length
         "A_2" : 1.5e-3, # Smaller distance to the point of max length
         "R_1" : 6.7e-3, # Larger radius
-        "R_2" : 2.9983e-3, # Smaller radius
-        "E" : 8.9178e9, # Modulus of elasticity
+        "R_2" : 3.1942e-3, # Smaller radius
+        "E" : 9.6095e9, # Modulus of elasticity
         "r" : 0.3e-3, # Radius of the backbone
         "mu" : 0.1, # Friction coefficient
     }
