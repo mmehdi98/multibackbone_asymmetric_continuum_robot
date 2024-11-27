@@ -28,7 +28,7 @@ def optimize_buckling(config, Ft_values, R_2_bounds, L_bounds, * , elastic_model
 
 def optimize_model(config, Ft_values, R_2_bounds, E_bounds, measured_directory, *, elastic_model):
 
-    x_measured, y_measured = utils.read_measurements(measured_directory)
+    x_measured, y_measured = utils.read_measurements(measured_directory, test_num="max_disp")
     x_measured = x_measured[0]
     y_measured = y_measured[0]
 
