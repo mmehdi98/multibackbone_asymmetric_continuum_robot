@@ -3,8 +3,10 @@ from scipy.optimize import root
 
 
 def initial_guess_gen(n, Ft, th_p_guess=0.4, th_a_guess=0.1):
-    theta_guess = [th_p_guess, th_a_guess] * int(n / 2) + [th_p_guess]
-    Ft_guess = [Ft * (0.5 + 0.5 * np.exp(-0.1 * i)) for i in range(n - 1)]
+    # theta_guess = [th_p_guess, th_a_guess] * int(n / 2) + [th_p_guess]
+    # Ft_guess = [Ft * (0.5 + 0.5 * np.exp(-0.1 * i)) for i in range(n - 1)]
+    theta_guess = [0]*n
+    Ft_guess = [0]*(n-1)
 
     return theta_guess + Ft_guess
 

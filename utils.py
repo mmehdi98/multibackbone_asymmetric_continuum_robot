@@ -5,8 +5,8 @@ def elastic_moment(i, E, I, L, th, R_left, R_right, alpha, betha, model= 'non-li
     vertical_dist_left = (R_left[i] * (1 - np.cos(alpha[i] - th[i])))
     vertical_dist_right = (R_right[i] * (1 - np.cos(betha[i] + th[i])))
 
-    k = 10.5
-    d = 2.3e-3
+    k = 10
+    d = -2e-3
     match model:
         case 'linear':
             return (
@@ -20,12 +20,16 @@ def elastic_moment(i, E, I, L, th, R_left, R_right, alpha, betha, model= 'non-li
                 )
             )
         case 'non-linear-L':
-            return (
-                (E * I) * np.sin(th[i]) * th[i]
-                * (1 / (vertical_dist_left * th[i] + d * np.sin(th[i])) 
-                   + 1 / (vertical_dist_right * th[i] + d * np.sin(th[i]))
+            if th[i]==0:
+                return 0
+            else:
+                return (
+                    (E * I) * np.sin(th[i]) * th[i]
+                    * (
+                        1 / (vertical_dist_left * th[i] + d * np.sin(th[i])) 
+                        + 1 / (vertical_dist_right * th[i] + d * np.sin(th[i]))
+                    )
                 )
-            )
     
             # return (
             #     (E * I) * np.sin(th[i])
@@ -66,10 +70,13 @@ def tendon_disp(thetas, config):
 
     return tendon_disp
 
-def theta_to_xy(theta, length):
+def theta_to_xy(theta, config):
     theta = np.ravel(theta)
     num = np.size(theta)
-    length = length * 1000
+    L = config['L'] * 1000
+    R_left = config['R_left']
+    R_right = config['R_right']
+    Gama = (config['A_1'] - config['A_2'])/2 * 1000
 
     x_coords = [0]
     y_coords = [0]
@@ -77,9 +84,16 @@ def theta_to_xy(theta, length):
     tf_total = np.eye(3)
     
     for i in range(num):
+        if theta[i] >= 0:
+            R = R_left[i] * 1000
+        else:
+            R = R_right[i] * 1000
+
+        x = R*(1-np.cos(theta[i])) + L*np.cos(theta[i]) - Gama*np.sin(theta[i])
+        y = R*(theta[i]-np.sin(theta[i])) - Gama + L*np.sin(theta[i]) + Gama*np.cos(theta[i])
         tf = np.array([
-            [np.cos(theta[i]), -np.sin(theta[i]), length * np.cos(theta[i])],
-            [np.sin(theta[i]),  np.cos(theta[i]), length * np.sin(theta[i])],
+            [np.cos(theta[i]), -np.sin(theta[i]), x],
+            [np.sin(theta[i]),  np.cos(theta[i]), y],
             [0,                0,               1]
         ])
         
@@ -136,3 +150,52 @@ def read_measurements(directory, mode="protagonist", test_num=None):
                 y.append([-(point[1] - y_ref)*1000 for point in points])
 
     return x, y
+
+def calculate_phi(theta, R_left, R_right, alpha, betha, Lt, Lc, At, Ac):
+    if theta > 0:
+        R = R_left
+        angle = alpha
+        Lf = Lt
+        A = At
+
+        Ly = Lc
+    elif theta < 0:
+        theta = -theta
+        R = R_right
+        angle = betha
+        Lf = Lc
+        A = Ac
+
+        Ly = Lt
+    else:
+        return 0
+    
+    x1 = R*theta + R*np.sin(angle-theta)
+    y1 = R*(1-np.cos(angle-theta))
+    p1 = (x1, y1)
+
+    x2 = x1 + Lf*np.sin(theta)
+    y2 = y1 + Lf*np.cos(theta)
+    p2 = (x2, y2)
+
+    x3 = A
+    y3 = -Ly
+    p3 = (x3, y3)
+
+    temp = p2[0] * p2[0] + p2[1] * p2[1]
+    bc = (p1[0] * p1[0] + p1[1] * p1[1] - temp) / 2
+    cd = (temp - p3[0] * p3[0] - p3[1] * p3[1]) / 2
+    det = (p1[0] - p2[0]) * (p2[1] - p3[1]) - (p2[0] - p3[0]) * (p1[1] - p2[1])
+    
+    if abs(det) < 1.0e-6:
+        return 0
+    
+    # Center of circle
+    cx = (bc*(p2[1] - p3[1]) - cd*(p1[1] - p2[1])) / det
+    cy = ((p1[0] - p2[0]) * cd - (p2[0] - p3[0]) * bc) / det
+    
+    radius = np.sqrt((cx - p1[0])**2 + (cy - p1[1])**2)
+    
+    phi = np.arccos(1-((p2[0]-p1[0])**2+(p2[1]-p1[1])**2)/(2*radius**2))
+
+    return phi

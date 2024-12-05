@@ -4,13 +4,13 @@ def initialize_constants():
     constants = {
         "num" : 15, # The number of joints
         "L" : 15e-3, # Total length of a joint
-        "A_1" : 3.5e-3, # Larger distance to the point of max length
-        "A_2" : 1.5e-3, # Smaller distance to the point of max length
-        "R_1" : 6.7e-3, # Larger radius
-        "R_2" : 3.1942e-3, # Smaller radius
-        "E" : 9.6095e9, # Modulus of elasticity
+        "A_1" : 3.2e-3, # Larger distance to the point of max length
+        "A_2" : 1e-3, # Smaller distance to the point of max length
+        "R_1" : 6.279e-3, # Larger radius
+        "R_2" : 2.67e-3, # Smaller radius
+        "E" : 5.358e9, # Modulus of elasticity
         "r" : 0.3e-3, # Radius of the backbone
-        "mu" : 0.1, # Friction coefficient
+        "mu" : 0.05, # Friction coefficient
     }
 
     constants["I"] = (np.pi * constants["r"]**4) / 4
@@ -51,17 +51,17 @@ def initialize_constants():
     return constants
 
 
-def initialize_constants_optimization(R_2, E):
+def initialize_constants_optimization(R_1, R_2, E, A1, A2, mu):
     constants = {
         "num" : 15, # The number of joints
         "L" : 15e-3, # Total length of a joint
-        "A_1" : 3.5e-3, # Larger distance to the point of max length
-        "A_2" : 1.5e-3, # Smaller distance to the point of max length
-        "R_1" : 6.7e-3, # Larger radius
+        "A_1" : A1, # Larger distance to the point of max length
+        "A_2" : A2, # Smaller distance to the point of max length
+        "R_1" : R_1, # Larger radius
         "R_2" : R_2, # Smaller radius
         "E" : E, # Modulus of elasticity
         "r" : 0.3e-3, # Radius of the backbone
-        "mu" : 0.1, # Friction coefficient
+        "mu" : mu, # Friction coefficient
     }
 
     constants["I"] = (np.pi * constants["r"]**4) / 4

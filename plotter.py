@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 import json
 import utils
 
-def plot_robot(theta, ax, Ft, length):
+def plot_robot(theta, ax, Ft, config):
     
-    x_coords, y_coords = utils.theta_to_xy(theta, length)
+    x_coords, y_coords = utils.theta_to_xy(theta, config)
 
     # Plot the robot
     ax.plot(x_coords, y_coords, '-o', label=f"{Ft}N", color='blue')
@@ -74,9 +74,9 @@ def plot_measured_robot(directory, ax):
     # ax.legend()
 
 
-def measure_error(theta, Ft, length, measured_directory):
+def measure_error(theta, Ft, config, measured_directory):
 
-    modeled_x, modeled_y = utils.theta_to_xy(theta, length)
+    modeled_x, modeled_y = utils.theta_to_xy(theta, config)
 
     x_measured, y_measured = utils.read_measurements(measured_directory, test_num="max_disp")
     x_measured = x_measured[0]
