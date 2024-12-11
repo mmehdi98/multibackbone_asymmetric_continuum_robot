@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from config import initialize_constants
+from configs import initialize_constants
 from solver import solve_robot
 from equations_mode1 import equations
 import plotter

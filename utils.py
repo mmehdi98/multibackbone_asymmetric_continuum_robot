@@ -107,6 +107,49 @@ def theta_to_xy(theta, config):
 
     return x_coords, y_coords
 
+def th2xy_measurements(theta, length):
+    theta = np.ravel(theta)
+    num = np.size(theta)
+    length = length * 1000
+
+    x_coords = [0]
+    y_coords = [0]
+
+    tf_total = np.eye(3)
+    
+    for i in range(num):
+        tf = np.array([
+            [np.cos(theta[i]), -np.sin(theta[i]), length * np.cos(theta[i])],
+            [np.sin(theta[i]),  np.cos(theta[i]), length * np.sin(theta[i])],
+            [0,                0,               1]
+        ])
+        
+        tf_total = tf_total @ tf
+        
+        new_x = tf_total[0, 2]
+        new_y = tf_total[1, 2]
+        
+        x_coords.append(new_x)
+        y_coords.append(new_y)
+
+    return x_coords, y_coords
+
+def xy_to_theta(full_x, full_y):
+    theta = []
+    for x_coords, y_coords in zip(full_x, full_y):
+        th = []
+        for i in range(1, len(x_coords)):
+            if i == 1:
+                th.append(np.arctan(y_coords[i]/x_coords[i]))
+            else:
+                # v1 = np.sqrt((x_coords[i]-x_coords[i-1])**2 + (y_coords[i]-y_coords[i-1])**2)
+                # v2 = np.sqrt((x_coords[i-1]-x_coords[i-2])**2 + (y_coords[i-1]-y_coords[i-2])**2)
+                det = - (x_coords[i]-x_coords[i-1])*(y_coords[i-1]-y_coords[i-2]) + (x_coords[i-1]-x_coords[i-2])*(y_coords[i]-y_coords[i-1])
+                dot = (x_coords[i]-x_coords[i-1])*(x_coords[i-1]-x_coords[i-2]) + (y_coords[i]-y_coords[i-1])*(y_coords[i-1]-y_coords[i-2])
+                th.append(np.arctan2(det,dot))
+        theta.append(th)
+    return theta
+
 def read_measurements(directory, mode="protagonist", test_num=None):
     with open(directory, 'r') as file:
         data = json.load(file)

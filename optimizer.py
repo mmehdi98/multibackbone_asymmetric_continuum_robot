@@ -5,7 +5,7 @@ from scipy.optimize import minimize
 # from equations_mode1 import equations
 import utils
 import matplotlib.pyplot as plt
-from config import initialize_constants_optimization
+from configs import initialize_constants_optimization
 from optimizer_equations import *
 
 

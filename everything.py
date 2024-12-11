@@ -7,8 +7,9 @@ from utils import tendon_disp, calculate_phi
 def main():
     config = initialize_constants()
 
+    measured_directory = 'F:\\Measurements\\Test_3\\protagonist_motion\\loading\\1\\Coordinates_1.json'
     measured_Ft = [0.0, 1.876832845, 2.815249267, 3.753665689, 4.692082111, 5.630498534, 7.507331378, 10.32258065, 13.13782991, 16.8914956, 22.52199413,
-                    31.90615836, 38.47507331, 47.85923754]
+                    29.09090909, 38.47507331, 47.85923754]
     Ft_values = np.append(np.linspace(0, 60, 100), measured_Ft)
     Ft_values = np.sort(Ft_values)
 
@@ -29,8 +30,7 @@ def main():
         theta_plot = theta_solutions[index]
         plotter.plot_robot(theta_plot, axs[2], Ft, config)
 
-    measured_directory = 'F:\\Measurements\\Test_3\\protagonist_motion\\loading\\1\\Coordinates_1.json'
-    plotter.plot_measured_robot(measured_directory, axs[2])
+    plotter.plot_measured_robot(config, measured_directory, axs[2])
 
     plt.tight_layout()
     plt.show()
@@ -50,13 +50,13 @@ def initialize_constants():
     constants = {
         "num" : 15, # The number of joints
         "L" : 15e-3, # Total length of a joint
-        "A_1" : 3.2e-3, # Larger distance to the point of max length
-        "A_2" : 1e-3, # Smaller distance to the point of max length
-        "R_1" : 6.279e-3, # Larger radius
-        "R_2" : 2.67e-3, # Smaller radius
-        "E" : 5.358e9, # Modulus of elasticity
+        "A_1" : 3.5907e-3, # Larger distance to the point of max length
+        "A_2" : 1.2e-3, # Smaller distance to the point of max length
+        "R_1" : 6.2682e-3, # Larger radius
+        "R_2" : 2.8472e-3, # Smaller radius
+        "E" : 7.04869e9, # Modulus of elasticity
         "r" : 0.3e-3, # Radius of the backbone
-        "mu" : 0.05, # Friction coefficient
+        "mu" : 0.22889, # Friction coefficient
     }
 
     constants["I"] = (np.pi * constants["r"]**4) / 4
@@ -249,7 +249,7 @@ def equations(vars, constants, Ft, elastic_model):
             )
             # Reverse motion
             if M_reverse <0:
-                th[i] = -0.9*th[i]
+                th[i] = -th[i]
                 M[i] = (
                     Fr[i+1] * (Ac[i] - (Ac[i+1] + R_left[i+1] * th[i+1] + R_right[i] * np.sin(th[i])))
                     - np.exp(-mu * sum_th[i]) * th[i] * Ft

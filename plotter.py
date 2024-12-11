@@ -48,9 +48,13 @@ def plot_theta_sum(Ft_values, theta_solutions, ax):
     ax.legend()
     ax.grid(True)
 
-def plot_measured_robot(directory, ax):
+def plot_measured_robot(config, directory, ax):
 
     x, y = utils.read_measurements(directory)
+    # theta = utils.xy_to_theta(x, y)
+    # print(theta)
+    # for i in range(len(x)):
+    #     x[i], y[i] = utils.th2xy_measurements(theta[i], config["L"])
 
     for i in range(len(x)):
         ax.plot(x[i], y[i], marker='o', color='orange')
