@@ -213,16 +213,17 @@ def calculate_phi(theta, R_left, R_right, alpha, betha, Lt, Lc, At, Ac):
     else:
         return 0
     
-    x1 = R*theta + R*np.sin(angle-theta)
-    y1 = R*(1-np.cos(angle-theta))
+    clearance = 0.49497274317149775e-3
+    x1 = R*theta + R*np.sin(angle-theta) + clearance*np.cos(theta)
+    y1 = R*(1-np.cos(angle-theta)) - clearance*np.sin(theta)
     p1 = (x1, y1)
 
-    x2 = x1 + Lf*np.sin(theta)
-    y2 = y1 + Lf*np.cos(theta)
+    x2 = x1 + Lf*np.sin(theta) - clearance*np.cos(theta)
+    y2 = y1 + Lf*np.cos(theta) + clearance*np.sin(theta)
     p2 = (x2, y2)
 
-    x3 = A
-    y3 = -Ly
+    x3 = A + clearance
+    y3 = 0
     p3 = (x3, y3)
 
     temp = p2[0] * p2[0] + p2[1] * p2[1]

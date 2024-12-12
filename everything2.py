@@ -2,8 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import root
 import plotter
-import utils
-from utils import tendon_disp, calculate_phi
+from utils import tendon_disp, calculate_phi, read_measurements
 
 def main():
     config = initialize_constants()
@@ -15,7 +14,7 @@ def main():
     Ft_values = np.sort(Ft_values)
 
     # Finding theta angles for the Ft range
-    theta_solutions = solve_robot(config, Ft_values, equations, elastic_model="non-linear")
+    theta_solutions, F_solutions = solve_robot(config, Ft_values, equations, elastic_model="non-linear")
 
     fig, axs = plt.subplots(1, 3, figsize=(20, 6))
 
@@ -26,35 +25,37 @@ def main():
     plotter.plot_theta_sum(Ft_values, theta_solutions, axs[1])
 
     # Plot the robot for given forces
+    E_plastic = 20e6
     modeled_x, modeled_y = [], []
     for Ft in measured_Ft:
         index = np.where(Ft_values == Ft)[0][0]
         theta_plot = theta_solutions[index]
-        plotter.plot_robot(theta_plot, axs[2], Ft, config)
+        F_plot = F_solutions[index]
+        plot_robot(theta_plot, axs[2], Ft, config, F_plot, E_plastic)
 
-        x_m, y_m = utils.theta_to_xy(theta_plot, config)
+        x_m, y_m = theta_to_xy(theta_plot, config, F_plot, E_plastic)
         modeled_x.append(x_m)
         modeled_y.append(y_m)
-    x_measured, y_measured = utils.read_measurements(measured_directory)
+    x_measured, y_measured = read_measurements(measured_directory)
 
     errors = []
-    for i in range(len(x_measured)):
-        for mx, my, x, y in zip(modeled_x[i], modeled_y[i], x_measured[i], y_measured[i]):
+    for i in range(10, len(x_measured)):
+        for k, (mx, my, x, y) in enumerate(zip(modeled_x[i], modeled_y[i], x_measured[i], y_measured[i])):
             error = []
-            error.append(np.sqrt((mx - x) ** 2 + (my - y) ** 2)/(config['L']*1000*(i+1)))
+            error.append(np.sqrt((mx - x) ** 2 + (my - y) ** 2)/(config['L']*1000*(k+1)))
         errors.append(error)
     mean_error = np.mean(np.array(errors).ravel())
     print(f"last error: {errors[-1][-1]}")
 
     print(f"Mean Error: {mean_error}")
 
-    plotter.plot_measured_robot(config, measured_directory, axs[2])
+    plot_measured_robot(config, measured_directory, axs[2])
 
     plt.tight_layout()
     plt.show()
 
     # Plot Ft vs tendon disp
-    tendon_displacements = [tendon_disp(theta_solutions[i], config) for i in range(len(Ft_values))]
+    tendon_displacements = [tendon_disp(theta_solutions[i], config, F_solutions[i], E_plastic)*1000 for i in range(len(Ft_values))]
     plt.figure(figsize=(8, 6))
     plt.plot(tendon_displacements, Ft_values, label="Tendon Displacement", color="b")
     plt.ylabel("$F_t$")
@@ -64,18 +65,18 @@ def main():
     plt.legend()
     plt.show()
 
-# The phi calculation from y=0, clearance = 0.4mm
+# The phi calculation from y=0, clearance = 0.49497274317149775mm and length reduction in kinematics
 def initialize_constants():
     constants = {
         "num" : 15, # The number of joints
         "L" : 15e-3, # Total length of a joint
-        "A_1" : 3.6875e-3, # Larger distance to the point of max length
-        "A_2" : 1.308859e-3, # Smaller distance to the point of max length
-        "R_1" : 5.36e-3, # Larger radius
-        "R_2" : 3e-3, # Smaller radius
-        "E" : 10.05e9, # Modulus of elasticity
+        "A_1" : 3.6321744229799937e-3, # Larger distance to the point of max length
+        "A_2" : 1.4128105036353378e-3, # Smaller distance to the point of max length
+        "R_1" : 5.377409026631593e-3, # Larger radius
+        "R_2" : 2.956017023426858e-3, # Smaller radius
+        "E" : 9.957668366e9, # Modulus of elasticity
         "r" : 0.3e-3, # Radius of the backbone
-        "mu" : 0.16089, # Friction coefficient
+        "mu" : 0.14890120697639153, # Friction coefficient
     }
 
     constants["I"] = (np.pi * constants["r"]**4) / 4
@@ -134,6 +135,7 @@ def solve_robot(
     method="hybr",
 ):
     theta_solutions = []
+    F_solutions = []
     initial_guess = initial_guess_gen(
         config["num"], 0, th_p_guess=th_p_guess, th_a_guess=th_a_guess
     )
@@ -146,6 +148,7 @@ def solve_robot(
         )
 
         theta_solutions.append(solution.x[: config["num"]])
+        F_solutions.append(np.append(solution.x[config["num"]:], Ft))
         initial_guess = list(solution.x)
 
         # if solution.success:
@@ -154,7 +157,7 @@ def solve_robot(
         # else:
         #     raise ValueError(f"Root-finding failed for Ft={Ft}: {solution.message}")
 
-    return np.array(theta_solutions)
+    return np.array(theta_solutions), np.array(F_solutions)
 
 def elastic_moment(i, E, I, L, th, R_left, R_right, alpha, betha, model= 'non-linear'):
     vertical_dist_left = (R_left[i] * (1 - np.cos(alpha[i] - th[i])))
@@ -302,6 +305,110 @@ def equations(vars, constants, Ft, elastic_model):
             )
 
     return np.concatenate((M, Fy[1:]))
+
+def theta_to_xy(theta, config, F_list, E_plastic):
+    theta = np.ravel(theta)
+    num = np.size(theta)
+    R_left = config['R_left']
+    R_right = config['R_right']
+    Gama = (config['A_1'] - config['A_2'])/2 * 1000
+
+    x_coords = [0]
+    y_coords = [0]
+
+    tf_total = np.eye(3)
+    
+    for i in range(num):
+        delta_L = F_list[i]*config['L']/(E_plastic*np.pi*(3.1e-3)**2)
+        L = (config['L']- delta_L)*1000
+        if theta[i] >= 0:
+            R = R_left[i] * 1000
+        else:
+            R = R_right[i] * 1000
+
+        x = R*(1-np.cos(theta[i])) + L*np.cos(theta[i]) - Gama*np.sin(theta[i])
+        y = R*(theta[i]-np.sin(theta[i])) - Gama + L*np.sin(theta[i]) + Gama*np.cos(theta[i])
+        tf = np.array([
+            [np.cos(theta[i]), -np.sin(theta[i]), x],
+            [np.sin(theta[i]),  np.cos(theta[i]), y],
+            [0,                0,               1]
+        ])
+        
+        tf_total = tf_total @ tf
+        
+        new_x = tf_total[0, 2]
+        new_y = tf_total[1, 2]
+        
+        x_coords.append(new_x)
+        y_coords.append(new_y)
+
+    return x_coords, y_coords
+
+def plot_measured_robot(config, directory, ax):
+
+    x, y = read_measurements(directory)
+    # theta = utils.xy_to_theta(x, y)
+    # print(theta)
+    # for i in range(len(x)):
+    #     x[i], y[i] = utils.th2xy_measurements(theta[i], config["L"])
+
+    for i in range(len(x)):
+        ax.plot(x[i], y[i], marker='o', color='orange')
+
+def plot_robot(theta, ax, Ft, config, F_list, E_plastic):
+    
+    x_coords, y_coords = theta_to_xy(theta, config, F_list, E_plastic)
+
+    # Plot the robot
+    ax.plot(x_coords, y_coords, '-o', label=f"{Ft}N", color='blue')
+    ax.text(x_coords[-1], y_coords[-1], f'{Ft:.2f}N', fontsize=12, ha='left', va='bottom')
+    ax.axis('equal')
+    ax.axhline(0, color='black',linewidth=0.5)
+    ax.axvline(0, color='black',linewidth=0.5)
+    ax.set_title(f'Robot Configurations')
+    ax.set_xlabel('X position (mm)')
+    ax.set_ylabel('Y position (mm)')
+    # ax.set_xlim(-0.2, 0.8)
+    # ax.set_ylim(0, 0.8)
+    # ax.set_xticks(np.arange(-0.1, 0.8, 0.1))
+    # ax.set_yticks(np.arange(-0.1, 0.9, 0.1))
+    ax.grid(True)
+    # ax.legend()
+
+def tendon_disp(thetas, config, F_list, E_plastic):
+    R_left = config["R_left"]
+    R_right = config["R_right"]
+    alpha = config["alpha"]
+    At = config["At"]
+    tendon_disp = 0
+
+    sum_d1 = 0
+    for i, theta in enumerate(thetas):
+        delta_L = F_list[i]*config['L']/(E_plastic*np.pi*(3.1e-3)**2)
+        tendon_disp +=delta_L
+        x0 = At[i]
+        y0 = 0
+        x1 = At[i]
+        y1 = R_left[i]*(1-np.cos(alpha[i]))
+        d1 = euclidean_dist((x0, y0), (x1, y1))
+        sum_d1 += d1 * 1000
+        if theta >= 0:
+            x2 = R_left[i] * (theta + np.sin(alpha[i]-theta))
+            y2 = R_left[i] * (1-np.cos(alpha[i]-theta))
+            d2 = euclidean_dist((x0, y0), (x2, y2))
+            tendon_disp += np.absolute(d2 - d1)
+        else:
+            x2 = At[i]*np.cos(alpha[i]/2 + theta) + R_right[i] * (np.sin(theta) - theta)
+            y2 = At[i]*np.sin(alpha[i]/2 + theta) + R_right[i] * (1-np.cos(theta))
+            d2 = euclidean_dist((x0, y0), (x2, y2))
+            tendon_disp -= np.absolute(d2 - d1)
+        # print(f"{i}: {d1 - d2}")
+    # print(f"sum_d1: {sum_d1}")
+
+    return tendon_disp
+
+def euclidean_dist(p1, p2):
+    return np.sqrt((p2[0]-p1[0])**2 + (p2[1]-p1[1])**2)
 
 if __name__ == "__main__":
     main()

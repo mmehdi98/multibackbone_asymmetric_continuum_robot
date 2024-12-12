@@ -16,11 +16,12 @@ def main():
     A1_bounds = (2.8e-3, 4e-3)
     A2_bounds = (0.6e-3, 1.6e-3)
     mu_bounds = (0.01, 0.5)
+    clearance_bounds = (0.2e-3, 0.5e-3)
     k_bounds = (1, 15)
     d_bounds = (0.2e-3, 4e-3)
     elastic_model = "non-linear"
     optimal_params, optimized_error = optimize_model(
-        config, measured_Ft, measured_directory, elastic_model, R1_bounds, R2_bounds, E_bounds, A1_bounds, A2_bounds, mu_bounds
+        config, measured_Ft, measured_directory, elastic_model, R1_bounds, R2_bounds, E_bounds, A1_bounds, A2_bounds, mu_bounds, clearance_bounds
     )
     print(f"Optimal R1: {optimal_params[0] * 1000}mm")
     print(f"Optimal R2: {optimal_params[1] * 1000}mm")
@@ -28,10 +29,11 @@ def main():
     print(f"Optimal A1: {optimal_params[3] * 1000}mm")
     print(f"Optimal A2: {optimal_params[4] * 1000}mm")
     print(f"Optimal mu: {optimal_params[5]}")
+    print(f"Optimal clearance = {optimal_params[6] * 1000}mm")
     if elastic_model == "linear":
-        print(f"Optimal k: {optimal_params[6]}")
+        print(f"Optimal k: {optimal_params[7]}")
     elif elastic_model == "non-linear-L":
-        print(f"Optimal d: {optimal_params[6]}")
+        print(f"Optimal d: {optimal_params[7]}")
     print(
         f"Optimized Error: {optimized_error}"
     )
@@ -47,14 +49,15 @@ def optimize_model(
     A1_bounds,
     A2_bounds,
     mu_bounds,
+    clearance_bounds,
     k_bounds=(1, 15), 
     d_bounds=(0.2e-3, 4e-3),
 ):
 
     x_measured, y_measured = utils.read_measurements(measured_directory)
-    theta_measured = utils.xy_to_theta(x_measured, y_measured)
-    for i in range(len(x_measured)):
-        x_measured[i], y_measured[i] = utils.th2xy_measurements(theta_measured[i], config["L"])
+    # theta_measured = utils.xy_to_theta(x_measured, y_measured)
+    # for i in range(len(x_measured)):
+    #     x_measured[i], y_measured[i] = utils.th2xy_measurements(theta_measured[i], config["L"])
 
     modeled_x, modeled_y = [[15 * i for i in range(16)]], [[0] * 16]
     diff = []
@@ -75,8 +78,8 @@ def optimize_model(
             config = initialize_constants_optimization(
                 params[0], params[1], params[2], params[3], params[4], params[5]
             )
-            theta = solve_robot(
-                config, Ft_values, equations, elastic_model=elastic_model
+            theta, F_solutions = solve_robot(
+                config, Ft_values, equations, elastic_model=elastic_model, clearance=params[6]
             )
         elif elastic_model == "non-linear-L":
             config = initialize_constants_optimization(
@@ -99,7 +102,8 @@ def optimize_model(
         for Ft in measured_Ft:
             index = np.where(Ft_values == Ft)[0][0]
             angles = theta[index]
-            x_m, y_m = utils.theta_to_xy(angles, config)
+            F = F_solutions[index]
+            x_m, y_m = theta_to_xy(angles, config, F)
             modeled_x.append(x_m)
             modeled_y.append(y_m)
 
@@ -112,9 +116,9 @@ def optimize_model(
 
         errors = []
         for i in range(len(x_measured)):
-            for mx, my, x, y, d in zip(modeled_x[i], modeled_y[i], x_measured[i], y_measured[i], diff[i]):
+            for k, (mx, my, x, y) in enumerate(zip(modeled_x[i], modeled_y[i], x_measured[i], y_measured[i])):
                 error = []
-                error.append(np.sqrt((mx - x) ** 2 + (my - y) ** 2)/(config['L']*1000*(i+1)))
+                error.append(np.sqrt((mx - x) ** 2 + (my - y) ** 2)/(config['L']*1000*(k+1)))
             errors.append(error)
 
         # mean_error_list = []
@@ -131,7 +135,7 @@ def optimize_model(
 
     match elastic_model:
         case "non-linear":
-            bounds = [R_1_bounds, R_2_bounds, E_bounds, A1_bounds, A2_bounds, mu_bounds]
+            bounds = [R_1_bounds, R_2_bounds, E_bounds, A1_bounds, A2_bounds, mu_bounds, clearance_bounds]
             # initial_params = np.array(
             #     [
             #         (R_1_bounds[0]+R_1_bounds[1])/2,
@@ -149,6 +153,7 @@ def optimize_model(
                     3.6875e-3, #A1
                     1.308859e-3, #A2
                     0.16089, #mu
+                    0.4, #clearance
                 ]
             )
         case "non-linear-L":
@@ -285,7 +290,7 @@ def elastic_moment(i, E, I, L, th, R_left, R_right, alpha, betha, k, d, model= '
                 )
 
                 
-def equations(vars, constants, Ft, elastic_model, k, d):
+def equations(vars, constants, Ft, clearance, elastic_model, k, d):
     L = constants["L"]
     mu = constants["mu"]
     E = constants["E"]
@@ -303,7 +308,7 @@ def equations(vars, constants, Ft, elastic_model, k, d):
     th = np.array(vars[0:n])
     Fr = np.array(vars[n:])
     Fr = np.insert(Fr, 0, 0)
-    phi = np.array([utils.calculate_phi(th[i], R_left[i], R_right[i], alpha[i], betha[i], Lt[i], Lc[i], At[i], Ac[i]) for i in range(len(th))])
+    phi = np.array([calculate_phi(th[i], R_left[i], R_right[i], alpha[i], betha[i], Lt[i], Lc[i], At[i], Ac[i], clearance) for i in range(len(th))])
 
     sum_th = np.cumsum(phi)
 
@@ -436,22 +441,25 @@ def solve_robot(
     th_p_guess=0.5,
     th_a_guess=-0.1,
     method="hybr",
+    clearance=0.4,
     k= 10.5,
     d= 2.3e-3
 ):
     theta_solutions = []
+    F_solutions = []
     initial_guess = initial_guess_gen(
         config["num"], 0, th_p_guess=th_p_guess, th_a_guess=th_a_guess
     )
 
     for Ft in Ft_values:
         solution = root(
-            lambda vars: equations(vars, config, Ft, elastic_model, k=k, d=d),
+            lambda vars: equations(vars, config, Ft, clearance, elastic_model, k=k, d=d),
             initial_guess,
             method=method,
         )
 
         theta_solutions.append(solution.x[: config["num"]])
+        F_solutions.append(np.append(solution.x[config["num"]:], Ft))
         initial_guess = list(solution.x)
 
         # if solution.success:
@@ -460,8 +468,94 @@ def solve_robot(
         # else:
         #     raise ValueError(f"Root-finding failed for Ft={Ft}: {solution.message}")
 
-    return np.array(theta_solutions)
+    return np.array(theta_solutions), np.array(F_solutions)
 
+def theta_to_xy(theta, config, F_list):
+    theta = np.ravel(theta)
+    num = np.size(theta)
+    R_left = config['R_left']
+    R_right = config['R_right']
+    Gama = (config['A_1'] - config['A_2'])/2 * 1000
+
+    x_coords = [0]
+    y_coords = [0]
+
+    tf_total = np.eye(3)
+    
+    for i in range(num):
+        delta_L = F_list[i]*config['L']/(20e6*np.pi*(3.1e-3)**2)
+        L = (config['L']- delta_L)*1000
+        if theta[i] >= 0:
+            R = R_left[i] * 1000
+        else:
+            R = R_right[i] * 1000
+
+        x = R*(1-np.cos(theta[i])) + L*np.cos(theta[i]) - Gama*np.sin(theta[i])
+        y = R*(theta[i]-np.sin(theta[i])) - Gama + L*np.sin(theta[i]) + Gama*np.cos(theta[i])
+        tf = np.array([
+            [np.cos(theta[i]), -np.sin(theta[i]), x],
+            [np.sin(theta[i]),  np.cos(theta[i]), y],
+            [0,                0,               1]
+        ])
+        
+        tf_total = tf_total @ tf
+        
+        new_x = tf_total[0, 2]
+        new_y = tf_total[1, 2]
+        
+        x_coords.append(new_x)
+        y_coords.append(new_y)
+
+    return x_coords, y_coords
+
+def calculate_phi(theta, R_left, R_right, alpha, betha, Lt, Lc, At, Ac, clearance):
+    if theta > 0:
+        R = R_left
+        angle = alpha
+        Lf = Lt
+        A = At
+
+        Ly = Lc
+    elif theta < 0:
+        theta = -theta
+        R = R_right
+        angle = betha
+        Lf = Lc
+        A = Ac
+
+        Ly = Lt
+    else:
+        return 0
+    
+    x1 = R*theta + R*np.sin(angle-theta) + clearance*np.cos(theta)
+    y1 = R*(1-np.cos(angle-theta)) - clearance*np.sin(theta)
+    p1 = (x1, y1)
+
+    x2 = x1 + Lf*np.sin(theta) - clearance*np.cos(theta)
+    y2 = y1 + Lf*np.cos(theta) + clearance*np.sin(theta)
+    p2 = (x2, y2)
+
+    x3 = A + clearance
+    y3 = 0
+    p3 = (x3, y3)
+
+    temp = p2[0] * p2[0] + p2[1] * p2[1]
+    bc = (p1[0] * p1[0] + p1[1] * p1[1] - temp) / 2
+    cd = (temp - p3[0] * p3[0] - p3[1] * p3[1]) / 2
+    det = (p1[0] - p2[0]) * (p2[1] - p3[1]) - (p2[0] - p3[0]) * (p1[1] - p2[1])
+    
+    if abs(det) < 1.0e-6:
+        return 0
+    
+    # Center of circle
+    cx = (bc*(p2[1] - p3[1]) - cd*(p1[1] - p2[1])) / det
+    cy = ((p1[0] - p2[0]) * cd - (p2[0] - p3[0]) * bc) / det
+    
+    radius = np.sqrt((cx - p1[0])**2 + (cy - p1[1])**2)
+    
+    phi = np.arccos(1-((p2[0]-p1[0])**2+(p2[1]-p1[1])**2)/(2*radius**2))
+
+    return phi
 
 if __name__ == "__main__":
     main()
