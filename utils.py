@@ -1,82 +1,16 @@
 import numpy as np
 import json
 
-def elastic_moment(i, E, I, L, th, R_left, R_right, alpha, betha, model= 'non-linear'):
-    vertical_dist_left = (R_left[i] * (1 - np.cos(alpha[i] - th[i])))
-    vertical_dist_right = (R_right[i] * (1 - np.cos(betha[i] + th[i])))
-
-    k = 10
-    d = -2e-3
-    match model:
-        case 'linear':
-            return (
-                (E * I / L) * k * th[i]
-                )
-        case 'non-linear':
-            return (
-                (E * I) * np.sin(th[i])
-                * (1 / (vertical_dist_left) 
-                   + 1 / (vertical_dist_right)
-                )
-            )
-        case 'non-linear-L':
-            if th[i]==0:
-                return 0
-            else:
-                return (
-                    (E * I) * np.sin(th[i]) * th[i]
-                    * (
-                        1 / (vertical_dist_left * th[i] + d * np.sin(th[i])) 
-                        + 1 / (vertical_dist_right * th[i] + d * np.sin(th[i]))
-                    )
-                )
-    
-            # return (
-            #     (E * I) * np.sin(th[i])
-            #     * (1 / (R_left[i] * (1 - np.cos(alpha[i] - th[i]))) 
-            #     + 1 / (R_right[i] * (1 - np.cos(betha[i] + th[i]))))
-            # )
-
 def euclidean_dist(p1, p2):
     return np.sqrt((p2[0]-p1[0])**2 + (p2[1]-p1[1])**2)
 
-def tendon_disp(thetas, config):
-    R_left = config["R_left"]
-    R_right = config["R_right"]
-    alpha = config["alpha"]
-    At = config["At"]
-    tendon_disp = 0
-
-    sum_d1 = 0
-    for i, theta in enumerate(thetas):
-        x0 = At[i]
-        y0 = 0
-        x1 = At[i]
-        y1 = R_left[i]*(1-np.cos(alpha[i]))
-        d1 = euclidean_dist((x0, y0), (x1, y1))
-        sum_d1 += d1 * 1000
-        if theta >= 0:
-            x2 = R_left[i] * (theta + np.sin(alpha[i]-theta))
-            y2 = R_left[i] * (1-np.cos(alpha[i]-theta))
-            d2 = euclidean_dist((x0, y0), (x2, y2))
-            tendon_disp += np.absolute(d2 - d1)
-        else:
-            x2 = At[i]*np.cos(alpha[i]/2 + theta) + R_right[i] * (np.sin(theta) - theta)
-            y2 = At[i]*np.sin(alpha[i]/2 + theta) + R_right[i] * (1-np.cos(theta))
-            d2 = euclidean_dist((x0, y0), (x2, y2))
-            tendon_disp -= np.absolute(d2 - d1)
-        # print(f"{i}: {d1 - d2}")
-    # print(f"sum_d1: {sum_d1}")
-
-    return tendon_disp
-
-def theta_to_xy(theta, config):
+def theta_to_xy(theta, config, F_list):
     theta = np.ravel(theta)
     num = np.size(theta)
-    L = config['L'] * 1000
     R_left = config['R_left']
     R_right = config['R_right']
     Gama = (config['A_1'] - config['A_2'])/2 * 1000
+    E_plastic = config["E_plastic"]
 
     x_coords = [0]
     y_coords = [0]
@@ -84,6 +18,8 @@ def theta_to_xy(theta, config):
     tf_total = np.eye(3)
     
     for i in range(num):
+        delta_L = F_list[i]*config['L']/(E_plastic*np.pi*(3.1e-3)**2)
+        L = (config['L']- delta_L)*1000
         if theta[i] >= 0:
             R = R_left[i] * 1000
         else:
@@ -106,49 +42,6 @@ def theta_to_xy(theta, config):
         y_coords.append(new_y)
 
     return x_coords, y_coords
-
-def th2xy_measurements(theta, length):
-    theta = np.ravel(theta)
-    num = np.size(theta)
-    length = length * 1000
-
-    x_coords = [0]
-    y_coords = [0]
-
-    tf_total = np.eye(3)
-    
-    for i in range(num):
-        tf = np.array([
-            [np.cos(theta[i]), -np.sin(theta[i]), length * np.cos(theta[i])],
-            [np.sin(theta[i]),  np.cos(theta[i]), length * np.sin(theta[i])],
-            [0,                0,               1]
-        ])
-        
-        tf_total = tf_total @ tf
-        
-        new_x = tf_total[0, 2]
-        new_y = tf_total[1, 2]
-        
-        x_coords.append(new_x)
-        y_coords.append(new_y)
-
-    return x_coords, y_coords
-
-def xy_to_theta(full_x, full_y):
-    theta = []
-    for x_coords, y_coords in zip(full_x, full_y):
-        th = []
-        for i in range(1, len(x_coords)):
-            if i == 1:
-                th.append(np.arctan(y_coords[i]/x_coords[i]))
-            else:
-                # v1 = np.sqrt((x_coords[i]-x_coords[i-1])**2 + (y_coords[i]-y_coords[i-1])**2)
-                # v2 = np.sqrt((x_coords[i-1]-x_coords[i-2])**2 + (y_coords[i-1]-y_coords[i-2])**2)
-                det = - (x_coords[i]-x_coords[i-1])*(y_coords[i-1]-y_coords[i-2]) + (x_coords[i-1]-x_coords[i-2])*(y_coords[i]-y_coords[i-1])
-                dot = (x_coords[i]-x_coords[i-1])*(x_coords[i-1]-x_coords[i-2]) + (y_coords[i]-y_coords[i-1])*(y_coords[i-1]-y_coords[i-2])
-                th.append(np.arctan2(det,dot))
-        theta.append(th)
-    return theta
 
 def read_measurements(directory, mode="protagonist", test_num=None):
     with open(directory, 'r') as file:
@@ -194,52 +87,84 @@ def read_measurements(directory, mode="protagonist", test_num=None):
 
     return x, y
 
-def calculate_phi(theta, R_left, R_right, alpha, betha, Lt, Lc, At, Ac):
-    if theta > 0:
-        R = R_left
-        angle = alpha
-        Lf = Lt
-        A = At
+def calculate_phi(theta, config):
+    clearance = config["clearance"]
+    phi = np.full_like(theta, 0)
+    for i, th in enumerate(theta):
+        if th > 0:
+            R = config["R_left"][i]
+            angle = config["alpha"][i]
+            Lf = config["Lt"][i]
+            A = config["At"][i]
 
-        Ly = Lc
-    elif theta < 0:
-        theta = -theta
-        R = R_right
-        angle = betha
-        Lf = Lc
-        A = Ac
+            Ly = config["Lc"][i]
+        elif th < 0:
+            th = -th
+            R = config["R_right"][i]
+            angle = config["betha"][i]
+            Lf = config["Lc"][i]
+            A = config["Ac"][i]
 
-        Ly = Lt
-    else:
-        return 0
-    
-    clearance = 0.49497274317149775e-3
-    x1 = R*theta + R*np.sin(angle-theta) + clearance*np.cos(theta)
-    y1 = R*(1-np.cos(angle-theta)) - clearance*np.sin(theta)
-    p1 = (x1, y1)
+            Ly = config["Lt"][i]
+        else:
+            phi[i] = 0
+            continue
+        
+        x1 = R*th + R*np.sin(angle-th) + clearance*np.cos(th)
+        y1 = R*(1-np.cos(angle-th)) - clearance*np.sin(th)
+        p1 = (x1, y1)
 
-    x2 = x1 + Lf*np.sin(theta) - clearance*np.cos(theta)
-    y2 = y1 + Lf*np.cos(theta) + clearance*np.sin(theta)
-    p2 = (x2, y2)
+        x2 = x1 + Lf*np.sin(th) - clearance*np.cos(th)
+        y2 = y1 + Lf*np.cos(th) + clearance*np.sin(th)
+        p2 = (x2, y2)
 
-    x3 = A + clearance
-    y3 = 0
-    p3 = (x3, y3)
+        x3 = A + clearance
+        y3 = 0
+        p3 = (x3, y3)
 
-    temp = p2[0] * p2[0] + p2[1] * p2[1]
-    bc = (p1[0] * p1[0] + p1[1] * p1[1] - temp) / 2
-    cd = (temp - p3[0] * p3[0] - p3[1] * p3[1]) / 2
-    det = (p1[0] - p2[0]) * (p2[1] - p3[1]) - (p2[0] - p3[0]) * (p1[1] - p2[1])
-    
-    if abs(det) < 1.0e-6:
-        return 0
-    
-    # Center of circle
-    cx = (bc*(p2[1] - p3[1]) - cd*(p1[1] - p2[1])) / det
-    cy = ((p1[0] - p2[0]) * cd - (p2[0] - p3[0]) * bc) / det
-    
-    radius = np.sqrt((cx - p1[0])**2 + (cy - p1[1])**2)
-    
-    phi = np.arccos(1-((p2[0]-p1[0])**2+(p2[1]-p1[1])**2)/(2*radius**2))
+        temp = p2[0] * p2[0] + p2[1] * p2[1]
+        bc = (p1[0] * p1[0] + p1[1] * p1[1] - temp) / 2
+        cd = (temp - p3[0] * p3[0] - p3[1] * p3[1]) / 2
+        det = (p1[0] - p2[0]) * (p2[1] - p3[1]) - (p2[0] - p3[0]) * (p1[1] - p2[1])
+        
+        if abs(det) < 1.0e-6:
+            phi[i] = 0
+            continue
+        
+        cx = (bc*(p2[1] - p3[1]) - cd*(p1[1] - p2[1])) / det
+        cy = ((p1[0] - p2[0]) * cd - (p2[0] - p3[0]) * bc) / det
+        
+        radius = np.sqrt((cx - p1[0])**2 + (cy - p1[1])**2)
+        
+        phi[i] = np.arccos(1-((p2[0]-p1[0])**2+(p2[1]-p1[1])**2)/(2*radius**2))
 
     return phi
+
+def tendon_disp(thetas, config, F_list):
+    R_left = config["R_left"]
+    R_right = config["R_right"]
+    alpha = config["alpha"]
+    At = config["At"]
+    E_plastic = config["E_plastic"]
+    tendon_disp = 0
+
+    for i, theta in enumerate(thetas):
+        delta_L = F_list[i]*config['L']/(E_plastic*np.pi*(3.1e-3)**2)
+        tendon_disp +=delta_L
+        x0 = At[i]
+        y0 = 0
+        x1 = At[i]
+        y1 = R_left[i]*(1-np.cos(alpha[i]))
+        d1 = euclidean_dist((x0, y0), (x1, y1))
+        if theta >= 0:
+            x2 = R_left[i] * (theta + np.sin(alpha[i]-theta))
+            y2 = R_left[i] * (1-np.cos(alpha[i]-theta))
+            d2 = euclidean_dist((x0, y0), (x2, y2))
+            tendon_disp += np.absolute(d2 - d1)
+        else:
+            x2 = At[i]*np.cos(alpha[i]/2 + theta) + R_right[i] * (np.sin(theta) - theta)
+            y2 = At[i]*np.sin(alpha[i]/2 + theta) + R_right[i] * (1-np.cos(theta))
+            d2 = euclidean_dist((x0, y0), (x2, y2))
+            tendon_disp -= np.absolute(d2 - d1)
+
+    return tendon_disp

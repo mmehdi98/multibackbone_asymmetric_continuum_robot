@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 import json
 import utils
 
-def plot_robot(theta, ax, Ft, config):
+def plot_robot(theta, ax, Ft, config, F_list):
     
-    x_coords, y_coords = utils.theta_to_xy(theta, config)
+    x_coords, y_coords = utils.theta_to_xy(theta, config, F_list)
 
     # Plot the robot
     ax.plot(x_coords, y_coords, '-o', label=f"{Ft}N", color='blue')
@@ -16,12 +16,7 @@ def plot_robot(theta, ax, Ft, config):
     ax.set_title(f'Robot Configurations')
     ax.set_xlabel('X position (mm)')
     ax.set_ylabel('Y position (mm)')
-    # ax.set_xlim(-0.2, 0.8)
-    # ax.set_ylim(0, 0.8)
-    # ax.set_xticks(np.arange(-0.1, 0.8, 0.1))
-    # ax.set_yticks(np.arange(-0.1, 0.9, 0.1))
     ax.grid(True)
-    # ax.legend()
 
 def plot_theta(Ft_values, theta_solutions, ax):
     theta_solutions = np.degrees(theta_solutions)
@@ -51,31 +46,9 @@ def plot_theta_sum(Ft_values, theta_solutions, ax):
 def plot_measured_robot(config, directory, ax):
 
     x, y = utils.read_measurements(directory)
-    # theta = utils.xy_to_theta(x, y)
-    # print(theta)
-    # for i in range(len(x)):
-    #     x[i], y[i] = utils.th2xy_measurements(theta[i], config["L"])
 
     for i in range(len(x)):
         ax.plot(x[i], y[i], marker='o', color='orange')
-
-    # with open(directory, 'r') as file:
-    #     data = json.load(file)
-
-    # for test_name, points in data.items():
-    #     if test_name.endswith('2051'):
-    #         x_ref = points[0][0]
-    #         y_ref = points[0][1]
-
-    # for test_name, points in data.items():
-    #     if test_name.endswith('_ply_filename'):
-    #         continue 
-        
-    #     x = [(point[0] - x_ref)*1000 for point in points]
-    #     y = [-(point[1] - y_ref)*1000 for point in points]
-        
-        # ax.plot(x, y, marker='o', label=test_name, color='orange')
-    # ax.legend()
 
 
 def measure_error(theta, Ft, config, measured_directory):

@@ -4,13 +4,15 @@ def initialize_constants():
     constants = {
         "num" : 15, # The number of joints
         "L" : 15e-3, # Total length of a joint
-        "A_1" : 3.2e-3, # Larger distance to the point of max length
-        "A_2" : 1e-3, # Smaller distance to the point of max length
-        "R_1" : 6.279e-3, # Larger radius
-        "R_2" : 2.67e-3, # Smaller radius
-        "E" : 5.358e9, # Modulus of elasticity
+        "A_1" : 3.6321744229799937e-3, # Larger distance to the point of max length
+        "A_2" : 1.4128105036353378e-3, # Smaller distance to the point of max length
+        "R_1" : 5.377409026631593e-3, # Larger radius
+        "R_2" : 2.956017023426858e-3, # Smaller radius
+        "E" : 9.957668366e9, # Modulus of elasticity
         "r" : 0.3e-3, # Radius of the backbone
-        "mu" : 0.05, # Friction coefficient
+        "mu" : 0.14890120697639153, # Friction coefficient
+        "clearance" : 0.49497274317149775e-3, # The clearance of the hole with the rod
+        "E_plastic" : 20e6, # The modulus of elasticity of the printing material
     }
 
     constants["I"] = (np.pi * constants["r"]**4) / 4
@@ -51,7 +53,7 @@ def initialize_constants():
     return constants
 
 
-def initialize_constants_optimization(R_1, R_2, E, A1, A2, mu):
+def initialize_constants_optimization(R_1, R_2, E, A1, A2, mu, clearance):
     constants = {
         "num" : 15, # The number of joints
         "L" : 15e-3, # Total length of a joint
@@ -62,6 +64,8 @@ def initialize_constants_optimization(R_1, R_2, E, A1, A2, mu):
         "E" : E, # Modulus of elasticity
         "r" : 0.3e-3, # Radius of the backbone
         "mu" : mu, # Friction coefficient
+        "clearance" : clearance, # The clearance of the hole with the rod
+        "E_plastic" : 20e6, # The modulus of elasticity of the printing material
     }
 
     constants["I"] = (np.pi * constants["r"]**4) / 4
