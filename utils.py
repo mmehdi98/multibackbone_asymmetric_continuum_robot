@@ -85,7 +85,7 @@ def read_measurements(directory, mode="protagonist", test_num=None):
                 x.append([(point[0] - x_ref)*1000 for point in points])
                 y.append([-(point[1] - y_ref)*1000 for point in points])
 
-    return x, y
+    return np.array(x), np.array(y)
 
 def calculate_phi(theta, config):
     clearance = config["clearance"]

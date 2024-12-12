@@ -39,12 +39,13 @@ def main():
         modeled_y.append(y_m)
     x_measured, y_measured = utils.read_measurements(measured_directory)
 
-    errors = []
-    for i in range(10, len(x_measured)):
+    errors = np.full_like(x_measured, 0)
+    for i in range(len(x_measured)):
+        error = np.full_like(x_measured[i], 0)
         for k, (mx, my, x, y) in enumerate(zip(modeled_x[i], modeled_y[i], x_measured[i], y_measured[i])):
-            error = []
-            error.append(np.sqrt((mx - x) ** 2 + (my - y) ** 2)/(config['L']*1000*(k+1)))
-        errors.append(error)
+            error[k] = np.sqrt((mx - x) ** 2 + (my - y) ** 2)/(config['L']*1000*(k+1))
+        errors[i] = error
+
     mean_error = np.mean(np.array(errors).ravel())
     print(f"last error: {errors[-1][-1]}")
 

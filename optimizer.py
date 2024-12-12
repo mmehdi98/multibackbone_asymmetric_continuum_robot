@@ -8,8 +8,8 @@ import solver
 def main():
     config = initialize_constants()
     measured_directory = 'F:\\Measurements\\Test_3\\protagonist_motion\\loading\\1\\Coordinates_1.json'
-    measured_Ft = [0.0, 1.876832845, 2.815249267, 3.753665689, 4.692082111, 5.630498534, 7.507331378, 10.32258065, 13.13782991, 16.8914956, 22.52199413,
-                29.09090909, 38.47507331, 47.85923754]
+    measured_Ft = np.array([0.0, 1.876832845, 2.815249267, 3.753665689, 4.692082111, 5.630498534, 7.507331378, 10.32258065, 13.13782991, 16.8914956, 22.52199413,
+                29.09090909, 38.47507331, 47.85923754])
     R1_bounds = (5e-3, 8e-3)
     R2_bounds = (2e-3, 5e-3)
     E_bounds = (1e9, 35e9)
@@ -61,14 +61,14 @@ def optimize_model(
         config = initialize_constants_optimization(params[0], params[1], params[2], params[3], params[4], params[5], params[6])
         theta, F_solutions = solver.solve_robot(config, Ft_values)
 
-        modeled_x, modeled_y = [], []
-        for Ft in measured_Ft:
+        modeled_x, modeled_y = np.full_like(x_measured, 0), np.full_like(y_measured, 0)
+        for i, Ft in enumerate(measured_Ft):
             index = np.where(Ft_values == Ft)[0][0]
             angles = theta[index]
             F = F_solutions[index]
             x_m, y_m = utils.theta_to_xy(angles, config, F)
-            modeled_x.append(x_m)
-            modeled_y.append(y_m)
+            modeled_x[i] = x_m
+            modeled_y[i] = y_m
 
         if (
             x_measured is None
@@ -77,12 +77,12 @@ def optimize_model(
         ):
             raise ValueError("Mismatch in data length or missing measurement data.")
 
-        errors = []
+        errors = np.full_like(x_measured, 0)
         for i in range(len(x_measured)):
+            error = np.full_like(x_measured[i], 0)
             for k, (mx, my, x, y) in enumerate(zip(modeled_x[i], modeled_y[i], x_measured[i], y_measured[i])):
-                error = []
-                error.append(np.sqrt((mx - x) ** 2 + (my - y) ** 2)/(config['L']*1000*(k+1)))
-            errors.append(error)
+                error[k] = np.sqrt((mx - x) ** 2 + (my - y) ** 2)/(config['L']*1000*(k+1))
+            errors[i] = error
 
         mean_error = np.mean(np.array(errors).ravel())
 

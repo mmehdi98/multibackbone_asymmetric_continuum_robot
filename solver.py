@@ -7,20 +7,20 @@ def solve_robot(
     Ft_values,
     method="hybr",
 ):
-    theta_solutions = []
-    F_solutions = []
-    initial_guess = [0]*(2*config["num"]-1)
+    theta_solutions = np.zeros((len(Ft_values), config["num"]))
+    F_solutions = np.zeros((len(Ft_values), config["num"]))
+    initial_guess = np.array([0]*(2*config["num"]-1))
 
-    for Ft in Ft_values:
+    for i, Ft in enumerate(Ft_values):
         solution = root(
             lambda vars: equations(vars, config, Ft),
             initial_guess,
             method=method,
         )
 
-        theta_solutions.append(solution.x[: config["num"]])
-        F_solutions.append(np.append(solution.x[config["num"]:], Ft))
-        initial_guess = list(solution.x)
+        theta_solutions[i] = solution.x[: config["num"]]
+        F_solutions[i] = np.append(solution.x[config["num"]:], Ft)
+        initial_guess = np.array(solution.x)
 
         # if solution.success:
         #     theta_solutions.append(solution.x[:config["num"]])
@@ -28,7 +28,7 @@ def solve_robot(
         # else:
         #     raise ValueError(f"Root-finding failed for Ft={Ft}: {solution.message}")
 
-    return np.array(theta_solutions), np.array(F_solutions)
+    return theta_solutions, F_solutions
 
 def elastic_moment(i, E, I, L, th, R_left, R_right, alpha, betha):
     vertical_dist_left = (R_left[i] * (1 - np.cos(alpha[i] - th[i])))
