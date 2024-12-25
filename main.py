@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from configs import initialize_constants
-import solver
+import solver2
 import plotter
 import utils
 
@@ -10,13 +10,13 @@ def main():
     config = initialize_constants()
 
     measured_directory = 'F:\\Measurements\\Test_3\\protagonist_motion\\loading\\1\\Coordinates_1.json'
-    measured_Ft = [0.0, 1.876832845, 2.815249267, 3.753665689, 4.692082111, 5.630498534, 7.507331378, 10.32258065, 13.13782991, 16.8914956, 22.52199413,
-                    29.09090909, 38.47507331, 47.85923754]
+    measured_Ft = [0.0, 1.876832845, 2.815249267, 3.753665689, 4.692082111, 5.630498534, 7.507331378, 10.32258065, 
+                    13.13782991, 16.8914956, 22.52199413, 29.09090909, 38.47507331, 47.85923754]
     Ft_values = np.append(np.linspace(0, 60, 100), measured_Ft)
     Ft_values = np.sort(Ft_values)
 
     # Finding theta angles for the Ft range
-    theta_solutions, F_solutions = solver.solve_robot(config, Ft_values)
+    theta_solutions, F_solutions = solver2.solve_robot(config, Ft_values)
 
     fig, axs = plt.subplots(1, 3, figsize=(20, 6))
 
@@ -39,6 +39,8 @@ def main():
         modeled_y.append(y_m)
     x_measured, y_measured = utils.read_measurements(measured_directory)
 
+    plotter.plot_measured_robot(config, measured_directory, axs[2])
+
     errors = np.full_like(x_measured, 0)
     for i in range(len(x_measured)):
         error = np.full_like(x_measured[i], 0)
@@ -50,8 +52,6 @@ def main():
     print(f"last error: {errors[-1][-1]}")
 
     print(f"Mean Error: {mean_error}")
-
-    plotter.plot_measured_robot(config, measured_directory, axs[2])
 
     plt.tight_layout()
     plt.show()

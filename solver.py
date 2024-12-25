@@ -135,7 +135,7 @@ def equations(vars, constants, Ft):
                     - elastic_moment(i, E, I, L, th, R_left, R_right, alpha, betha)
                 )
             #Normal motion
-            elif M_reverse > 0:
+            else:
                 M[i] = (
                     np.exp(-mu * sum_th[i]) * th[i] * Ft
                     * (
@@ -146,9 +146,6 @@ def equations(vars, constants, Ft):
                     - Fr[i+1] * ((Ac[i] - Ac[i+1]) - (R_left[i+1] * th[i+1] - R_left[i] * np.sin(th[i])))
                     - elastic_moment(i, E, I, L, th, R_left, R_right, alpha, betha)
                 )
-
-            else:
-                pass
 
             Fy[i] = (
                 Fr[i] * np.cos(th[i])

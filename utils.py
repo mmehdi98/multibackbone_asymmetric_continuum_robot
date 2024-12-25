@@ -87,6 +87,38 @@ def read_measurements(directory, mode="protagonist", test_num=None):
 
     return np.array(x), np.array(y)
 
+def tendon_disp(thetas, config, F_list):
+    R_left = config["R_left"]
+    R_right = config["R_right"]
+    alpha = config["alpha"]
+    At = config["At"]
+    E_plastic = config["E_plastic"]
+    tendon_disp = 0
+
+    for i, theta in enumerate(thetas):
+        delta_L = F_list[i]*config['L']/(E_plastic*np.pi*(3.1e-3)**2)
+        tendon_disp +=delta_L
+        x0 = At[i]
+        y0 = 0
+        x1 = At[i]
+        y1 = R_left[i]*(1-np.cos(alpha[i]))
+        d1 = euclidean_dist((x0, y0), (x1, y1))
+        if theta >= 0:
+            x2 = R_left[i] * (theta + np.sin(alpha[i]-theta))
+            y2 = R_left[i] * (1-np.cos(alpha[i]-theta))
+            d2 = euclidean_dist((x0, y0), (x2, y2))
+            tendon_disp += np.absolute(d2 - d1)
+        else:
+            x2 = At[i]*np.cos(alpha[i]/2 + theta) + R_right[i] * (np.sin(theta) - theta)
+            y2 = At[i]*np.sin(alpha[i]/2 + theta) + R_right[i] * (1-np.cos(theta))
+            d2 = euclidean_dist((x0, y0), (x2, y2))
+            tendon_disp -= np.absolute(d2 - d1)
+
+    return tendon_disp
+
+##########################################################
+# Calculate Phi
+
 def calculate_phi(theta, config):
     clearance = config["clearance"]
     phi = np.full_like(theta, 0)
@@ -127,7 +159,7 @@ def calculate_phi(theta, config):
         cd = (temp - p3[0] * p3[0] - p3[1] * p3[1]) / 2
         det = (p1[0] - p2[0]) * (p2[1] - p3[1]) - (p2[0] - p3[0]) * (p1[1] - p2[1])
         
-        if abs(det) < 1.0e-6:
+        if abs(det) < 0.7e-6:
             phi[i] = 0
             continue
         
@@ -140,31 +172,45 @@ def calculate_phi(theta, config):
 
     return phi
 
-def tendon_disp(thetas, config, F_list):
-    R_left = config["R_left"]
-    R_right = config["R_right"]
-    alpha = config["alpha"]
-    At = config["At"]
-    E_plastic = config["E_plastic"]
-    tendon_disp = 0
+def calc_phi(theta, config):
+    clearance = config["clearance"]
+    phi = np.zeros_like(theta)
 
-    for i, theta in enumerate(thetas):
-        delta_L = F_list[i]*config['L']/(E_plastic*np.pi*(3.1e-3)**2)
-        tendon_disp +=delta_L
-        x0 = At[i]
-        y0 = 0
-        x1 = At[i]
-        y1 = R_left[i]*(1-np.cos(alpha[i]))
-        d1 = euclidean_dist((x0, y0), (x1, y1))
-        if theta >= 0:
-            x2 = R_left[i] * (theta + np.sin(alpha[i]-theta))
-            y2 = R_left[i] * (1-np.cos(alpha[i]-theta))
-            d2 = euclidean_dist((x0, y0), (x2, y2))
-            tendon_disp += np.absolute(d2 - d1)
-        else:
-            x2 = At[i]*np.cos(alpha[i]/2 + theta) + R_right[i] * (np.sin(theta) - theta)
-            y2 = At[i]*np.sin(alpha[i]/2 + theta) + R_right[i] * (1-np.cos(theta))
-            d2 = euclidean_dist((x0, y0), (x2, y2))
-            tendon_disp -= np.absolute(d2 - d1)
+    R = np.where(theta > 0, config["R_left"], config["R_right"])
+    angle = np.where(theta > 0, config["alpha"], config["betha"])
+    Lf = np.where(theta > 0, config["Lt"], config["Lc"])
+    A = np.where(theta > 0, config["At"], config["Ac"])
+    Ly = np.where(theta > 0, config["Lc"], config["Lt"])
+    abs_theta = np.abs(theta)
 
-    return tendon_disp
+    sin_theta = np.sin(abs_theta)
+    cos_theta = np.cos(abs_theta)
+    sin_angle_theta = np.sin(angle - abs_theta)
+    cos_angle_theta = np.cos(angle - abs_theta)
+
+    x1 = R * abs_theta + R * sin_angle_theta + clearance * cos_theta
+    y1 = R * (1 - cos_angle_theta) - clearance * sin_theta
+    x2 = x1 + Lf * sin_theta - clearance * cos_theta
+    y2 = y1 + Lf * cos_theta + clearance * sin_theta
+    x3 = A + clearance
+    y3 = np.zeros_like(x3)
+
+    D = 2 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2))
+    D_x = ((x1**2 + y1**2) * (y2 - y3) +
+           (x2**2 + y2**2) * (y3 - y1) +
+           (x3**2 + y3**2) * (y1 - y2))
+    D_y = ((x1**2 + y1**2) * (x3 - x2) +
+           (x2**2 + y2**2) * (x1 - x3) +
+           (x3**2 + y3**2) * (x2 - x1))
+
+    cx = D_x / D
+    cy = D_y / D
+
+    theta1 = np.arctan2(y1 - cy, x1 - cx)
+    theta2 = np.arctan2(y2 - cy, x2 - cx)
+    delta_theta = np.abs(theta2 - theta1)
+    phi = np.minimum(delta_theta, 2 * np.pi - delta_theta)
+
+    phi[theta == 0] = 0
+
+    return phi
