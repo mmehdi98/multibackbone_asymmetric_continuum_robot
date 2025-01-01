@@ -4,15 +4,15 @@ def initialize_constants():
     constants = {
         "num" : 15, # The number of joints
         "L" : 15e-3, # Total length of a joint
-        "A_1" : 3.9999999734611524e-3, # Larger distance to the point of max length
-        "A_2" : 1.341592702073776e-3, # Smaller distance to the point of max length
-        "R_1" : 6.421930113828955e-3, # Larger radius
-        "R_2" : 3.8763424357583722e-3, # Smaller radius
-        "E" : 7.894824891e9, # Modulus of elasticity
+        "A_1" : 3.9800381829864038e-3, # Larger distance to the point of max length
+        "A_2" : 1.3284117752480253e-3, # Smaller distance to the point of max length
+        "R_1" : 6.372535888017169e-3, # Larger radius
+        "R_2" : 3.7985343068965247e-3, # Smaller radius
+        "E" : 7.792131959e9, # Modulus of elasticity
         "r" : 0.3e-3, # Radius of the backbone
-        "mu" : 0.07063720397577908, # Friction coefficient
-        "clearance" : 0.5998697866515922e-3, # The clearance of the hole with the rod
-        "E_plastic" : 20e6, # The modulus of elasticity of the printing material
+        "mu" : 0.07029685922092599, # Friction coefficient
+        "clearance" : 0.5998572785034868e-3, # The clearance of the hole with the rod
+        "E_plastic" : 25e6, # The modulus of elasticity of the printing material
     }
 
     constants["I"] = (np.pi * constants["r"]**4) / 4

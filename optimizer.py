@@ -15,7 +15,7 @@ def main():
     E_bounds = (1e9, 70e9)
     A1_bounds = (2.5e-3, 4e-3)
     A2_bounds = (0.5e-3, 1.8e-3)
-    mu_bounds = (0.01, 0.5)
+    mu_bounds = (0.01, 0.3)
     clearance_bounds = (0.2e-3, 0.6e-3)
     bounds = [R1_bounds, R2_bounds, E_bounds, A1_bounds, A2_bounds, mu_bounds, clearance_bounds]
     initial_params = np.array(
@@ -25,7 +25,7 @@ def main():
             10e9, #E
             3.6e-3, #A1
             1.4e-3, #A2
-            0.14, #mu
+            0.1, #mu
             0.4e-3, #clearance
         ]
     )
@@ -86,7 +86,7 @@ def optimize_model(
 
         mean_error = np.mean(np.array(errors).ravel())
 
-        print(f"error: {mean_error}, mu:{config["mu"]}")
+        print(f"error: {mean_error:.5f}, mu:{config["mu"]:.5f}, R1:{config["R_1"]:.5f}, R2:{config["R_2"]:.5f}, E:{config["E"]:.5f}, A1:{config["A_1"]:.5f}, A2:{config["A_2"]:.5f}")
 
         return mean_error
 

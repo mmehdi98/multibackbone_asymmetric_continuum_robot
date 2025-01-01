@@ -62,7 +62,7 @@ def equations(vars, constants, Ft):
 
     for i in range(n):
         th = th_array[i]
-        phi = phi_array[i]
+        # phi = phi_array[i]
         sum_phi = sum_phi_array[i]
         Fr = Fr_array[i]
 
@@ -87,7 +87,7 @@ def equations(vars, constants, Ft):
             # Protagonist joints
             if i & 1 == 0:
                 M[i] = (
-                    Ft*np.exp(-mu * sum_phi)*th
+                    Ft*np.exp(-mu * sum_phi)*(1-np.exp(-mu * th))/mu
                     * (
                         Lt/2 + R_left*(1-np.cos(alpha)) - R*(1-np.cos(th)) + mu*(At - R*np.sin(th))
                     )
@@ -98,14 +98,14 @@ def equations(vars, constants, Ft):
                 Fy[i] = (
                     Fr * np.cos(th)
                     - Fr_up
-                    - Ft * mu * np.exp(-mu * sum_phi) * th
+                    - Ft*np.exp(-mu * sum_phi)*(1-np.exp(-mu * th))
                 )
 
             # Antagonist joints
             else:
                 th = -th
                 M[i] = abs(
-                    Ft*np.exp(-mu * sum_phi)*th
+                    Ft*np.exp(-mu * sum_phi)*(1-np.exp(-mu * th))/mu
                     * (
                         Lt/2 + R_left*(1-np.cos(alpha)) - R*(1-np.cos(th)) + mu*(At - R*np.sin(th))
                     )
@@ -116,12 +116,12 @@ def equations(vars, constants, Ft):
                 Fy[i] = (
                     Fr * np.cos(th)
                     - Fr_up
-                    - Ft * mu * np.exp(-mu * sum_phi) * th
+                    - Ft*np.exp(-mu * sum_phi)*(1-np.exp(-mu * th))
                 )
 
         else:
             M[i] = (
-                Ft*np.exp(-mu * sum_phi)*th
+                Ft*np.exp(-mu * sum_phi)*(1-np.exp(-mu * th))/mu
                 * (
                     Lt/2 + R_left*(1-np.cos(alpha)) - R*(1-np.cos(th)) + mu*(At - R*np.sin(th))
                 )
@@ -131,7 +131,7 @@ def equations(vars, constants, Ft):
 
             Fy[i] = (
                 Fr * np.cos(th)
-                - Ft * np.exp(-mu * sum_phi) * (1 + mu*th)
+                - Ft*np.exp(-mu * sum_phi)
             )
 
 
